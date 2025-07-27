@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Line Chart Example</title>
+    <link href="https://fonts.googleapis.com/css?family=Oswald:300,700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Roboto:300,700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body style="background: #b0aeae; min-height: 100vh; margin: 0; padding: 0;">
+    <div style="width: 95%; min-height: 64vh; margin: 12px auto; padding: 16px 20px; background: #fff; border-radius: 12px; box-shadow: 0 6px 32px rgba(0,0,0,0.10); display: flex; flex-direction: column;">
+        <canvas id="realtimeChart" style="width:100%; height:52vh; margin-bottom:3px;"></canvas>
+        <div id="realtimeInfo" style="display: flex; gap: 52px; align-items: center; font-family: 'Oswald', sans-serif; font-size: 1.2em; margin-bottom: 12px; background: #f1f1f1; color: #fff; border-radius: 8px; box-shadow: 0 2px px rgba(0,0,0,0.08); padding: 7px 0; justify-content: center;">
+            <span id="phValue">PH: --</span>
+            <span id="orpValue">ORP: --</span>
+            <span id="tempValue">Temperature: --</span>
+            <span id="nValue">Nitrate: --</span>
+            <span id="pValue">Phosphate: --</span>
+            <span id="khValue">Alkalinity: --</span>
+            <span id="caValue">Calcium: --</span>
+            <span id="mgValue">Magnesium: --</span>
+        </div>
+        <div style="display: flex; gap: 40px; align-items: stretch; height: 32vh; width: 100%; font-family: 'Lato', sans-serif;">
+            <div style="flex: 1; display: flex; align-items: stretch; justify-content: center;">
+                <canvas id="staticChartLeft" style="width:100%; height:100%;"></canvas>
+            </div>
+            <div style="flex: 1; display: flex; align-items: stretch; justify-content: center;">
+                <canvas id="staticChartRight" style="width:100%; height:100%;"></canvas>
+            </div>
+        </div>
+    </div>
+    <script>
+        // Real-time chart data
+        const realtimeData = {{ realtime_data|tojson }};
+        // ...existing code...
+        // Group realtimeData by hour and average PH/ORP for each hour
+        function getHour(ts) {
+            // Assumes ts format 'YYYY-MM-DD HH:MM:SS'
+            return ts ? ts.slice(0, 13) + ':00' : '';
+        }
+        const hourMap = {};
+        realtimeData.forEach(d => {
+            const hour = getHour(d.time);
+            if (!hourMap[hour]) hourMap[hour] = { PH: [], ORP: [] };
+            if (typeof d.PH === 'number') hourMap[hour].PH.push(d.PH);
+            if (typeof d.ORP === 'number') hourMap[hour].ORP.push(d.ORP);
+        });
+        // 反转顺序，使左侧为最早日期，右侧为最近日期
+        const hourLabels = Object.keys(hourMap).reverse();
+        // 获取所有有数据的日期
+        // X轴为最近10天所有小时点，无数据则为null
+        function getRecentHours(days) {
+            const result = [];
+            const now = new Date();
+            for (let d = days - 1; d >= 0; d--) {
+                let date = new Date(now);
+                date.setDate(now.getDate() - d);
+            for (let h = 0; h < 24; h++) {
+                for (let m = 0; m < 60; m += 30) {
+                    let dt = new Date(date);
+                    dt.setHours(h, m, 0, 0);
+                    result.push(dt);
+                }
+            }
+            }
+            return result;
+        }
+        const hourObjs = getRecentHours(10);
+        const dateLabels = hourObjs.map(dt => dt.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit' }));
+        function findValueForHour(dt, key) {
+            // dt: Date对象，key: 'PH'或'ORP'
+            // target: 'YYYY-MM-DD HHM'，将T替换为空格，M为分钟（00或30）
+            const ymdhm = dt.toISOString().slice(0, 16).replace('T', ' '); // 'YYYY-MM-DD HH:MM'
+            for (let i = 0; i < realtimeData.length; i++) {
+                const t = realtimeData[i].time;
+                if (t && t.startsWith(ymdhm)) {
+                    return typeof realtimeData[i][key] === 'number' ? realtimeData[i][key] : null;
+                }
+            }
+            return null;
+        }
+        const phHourValues = hourObjs.map(dt => findValueForHour(dt, 'PH'));
+        const orpHourValues = hourObjs.map(dt => findValueForHour(dt, 'ORP'));
+        
+        const realtimeElem = document.getElementById('realtimeChart');
+        let lastLabel = "Jan 1";
+        // 只设置宽度，保持高度由CSS控制
+        realtimeElem.width = realtimeElem.parentElement.offsetWidth;
+        const ctxRealtime = realtimeElem.getContext('2d');
+        // 统一颜色常量
+        const COLOR_GREEN = 'rgba(0, 200, 80, 1)';
+        const COLOR_BLUE = 'rgba(54, 162, 235, 1)';
+        const COLOR_RED = 'rgba(255, 99, 132, 1)';
+        const COLOR_YELLOW = 'rgba(255, 206, 86, 1)';
+        const COLOR_TEAL = 'rgba(75, 192, 192, 1)';
+        const COLOR_PURPLE = 'rgba(153, 102, 255, 1)';
+        const COLOR_ORANGE = 'rgba(255, 159, 64, 1)';
+        const COLOR_PINK = 'rgba(255, 105, 180, 1)';
+        const COLOR_BROWN = 'rgba(160, 82, 45, 1)';
+        const COLOR_GRAY = 'rgba(128, 128, 128, 1)';
+        const COLOR_BLACK = 'rgba(0, 0, 0, 1)';
+        const COLOR_CYAN = 'rgba(0, 255, 255, 1)';
+        const COLOR_LIME = 'rgba(50, 205, 50, 1)';
+        const COLOR_GOLD = 'rgba(255, 215, 0, 1)';
+
+        const COLORS = {
+            ph: COLOR_ORANGE,
+            orp: COLOR_BLUE,
+            n: COLOR_GRAY,
+            p: COLOR_RED,
+            ca: COLOR_YELLOW,
+            mg: COLOR_TEAL,
+            kh: COLOR_PURPLE,
+            t: COLOR_GREEN,
+        };
+
+        const realtimeChart = new Chart(ctxRealtime, {
+            type: 'line',
+            data: {
+                labels: dateLabels,
+                datasets: [
+                    {
+                        label: 'PH',
+                        data: phHourValues,
+                        borderColor: COLORS.ph,
+                        fill: false,
+                        tension: 0.4,
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        pointHoverRadius: 6,
+                        yAxisID: 'yLeft',
+                        spanGaps: true
+                    },
+                    {
+                        label: 'ORP',
+                        data: orpHourValues,
+                        borderColor: COLORS.orp,
+                        fill: false,
+                        tension: 0.4,
+                        borderWidth: 3,
+                        pointRadius: 0,
+                        pointHoverRadius: 6,
+                        yAxisID: 'yRight',
+                        spanGaps: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                interaction: {
+                    mode: 'index',
+                    axis: 'x',
+                    intersect: false
+                },
+                scales: {
+                    x: {
+                        ticks: {
+                            font: {
+                                family: 'Oswald',
+                                size: 12
+                            },
+                            autoSkip: false,
+                            callback: function(value, index, ticks) {
+                                // 调试输出 value, index, label
+                                const label = this.getLabelForValue(value);
+                                const labelParts = label.split(', ')[0];
+                                
+                                // 只显示label包含', 12 AM'的点，且只显示日期部分
+                                if (label.includes('12 AM')) {
+                                    if (lastLabel !== labelParts) {
+                                        lastLabel = labelParts;
+                                        return labelParts;
+                                    } 
+                                }
+                                return '';
+                            }
+                        },
+                        grid: {
+                            // 使用回调函数控制 lineWidth
+                            lineWidth: function(context) {
+                                // context.index 是当前网格线的索引
+                                // 例如，只显示偶数索引的竖线
+                                if (context.index % 24 === 0) {
+                                    return 1; // 显示线宽为 1px 的竖线
+                                }
+                                return 0; // 隐藏（线宽为 0）
+                            },
+                            color: 'rgba(180,180,180,0.12)', // 设置淡灰色竖线
+                            drawTicks: false,
+                            drawOnChartArea: true,
+                            drawBorder: true
+                        }
+                        
+                    },
+                    yLeft: {
+                        type: 'linear',
+                        position: 'left',
+                        beginAtZero: false,
+                        suggestedMax: 1.02 * Math.max(...phHourValues.filter(v => v !== null)),
+                        ticks: {
+                            font: {
+                                family: 'Oswald',
+                                size: 14
+                            }
+                        },
+                        grid: {
+                            color: 'rgba(180,180,180,0.12)'
+                        }
+                    },
+                    yRight: {
+                        type: 'linear',
+                        position: 'right',
+                        beginAtZero: false,
+                        suggestedMax: 1.002 * Math.max(...orpHourValues.filter(v => v !== null)),
+                        ticks: {
+                            font: {
+                                family: 'Oswald',
+                                size: 14
+                            }
+                        },
+                        grid: {
+                            drawOnChartArea: false
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        enabled: true,
+                        mode: 'index',
+                        intersect: false,
+                        bodyFont: {
+                            family: 'Oswald',
+                            size: 14
+                        },
+                        callbacks: {
+                            label: function(context) {
+                                const key = context.dataset.label;
+                                const idx = context.dataIndex;
+                                let value = 'N/A';
+                                if (key === 'ORP' && typeof orpHourValues[idx] !== 'undefined') {
+                                    value = orpHourValues[idx];
+                                } else if (key === 'PH' && typeof phHourValues[idx] !== 'undefined') {
+                                    value = phHourValues[idx];
+                                }
+                                return key + ': ' + value;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        const rawData = {{ chart_data|tojson }};
+        const chartElem = document.getElementById('staticChartLeft');
+        const chartRightElem = document.getElementById('staticChartRight');
+        // Set canvas to fill parent div
+        chartElem.width = chartElem.parentElement.offsetWidth;
+        chartElem.height = chartElem.parentElement.offsetHeight;
+        chartRightElem.width = chartRightElem.parentElement.offsetWidth;
+        chartRightElem.height = chartRightElem.parentElement.offsetHeight;
+        const ctx = chartElem.getContext('2d');
+        const ctxRight = chartRightElem.getContext('2d');
+        const colorPalette = [
+            COLORS.n, // blue
+            COLORS.p, // red
+            COLORS.ca, // yellow
+            COLORS.mg, // teal
+            COLORS.kh, // purple
+            COLORS.orange // orange
+        ];
+
+        // Helper to get week start from date string (assumes format 'Mon DD')
+        function getWeekStart(dateStr) {
+            const d = new Date(dateStr + ', 2025');
+            const day = d.getDay();
+            const diff = d.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is Sunday
+            const monday = new Date(d.setDate(diff));
+            return monday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        }
+
+        // Group all entries by week
+        const weekMap = {};
+        rawData.forEach(d => {
+            const week = getWeekStart(d.date);
+            if (!weekMap[week]) weekMap[week] = {};
+            ['N','P','CA','MG','KH'].forEach(key => {
+                if (d[key] !== undefined) {
+                    if (!weekMap[week][key]) weekMap[week][key] = [];
+                    weekMap[week][key].push(d[key]);
+                }
+            });
+        });
+
+        // Aggregate values for each week (average)
+        function avg(arr) {
+            if (!arr || arr.length === 0) return null;
+            return parseFloat((arr.reduce((a,b) => a+b,0) / arr.length).toFixed(2));
+        }
+
+        const labels = Object.keys(weekMap);
+        const elementKeys = ['N', 'P'];
+
+        const elementData = {};  
+        elementKeys.forEach(key => {
+            elementData[key] = labels.map(week => {
+                const arr = weekMap[week][key];
+                return arr ? avg(arr) : null;
+            });
+        });
+
+        const elementKeysRight = ['CA', 'MG', 'KH'];
+        const elementDataRight = {};
+        elementKeysRight.forEach(key => {
+            elementDataRight[key] = labels.map(week => {
+                const arr = weekMap[week][key];
+                return arr ? avg(arr) : null;
+            });
+        });
+
+        // Store original data for tooltips
+        const originalData = elementData;
+        const originalDataRight = elementDataRight;
+
+        // 获取最新的PH、ORP、温度和元素周均值
+        function getLatestRealtime() {
+            if (!realtimeData || realtimeData.length === 0) return { PH: '--', ORP: '--', T: '--', N: '--', P: '--', KH: '--', CA: '--', MG: '--' };
+            // 按时间倒序
+            const sorted = [...realtimeData].sort((a, b) => (b.time > a.time ? 1 : -1));
+            const latest = sorted[0];
+            // 取 elementData 的最新一周数据
+            let nVal = '--', pVal = '--', khVal = '--', caVal = '--', mgVal = '--';
+            if (typeof elementData !== 'undefined' && Array.isArray(elementData['N']) && elementData['N'].length > 0) {
+                nVal = elementData['N'][elementData['N'].length - 1];
+            }
+            if (typeof elementData !== 'undefined' && Array.isArray(elementData['P']) && elementData['P'].length > 0) {
+                pVal = elementData['P'][elementData['P'].length - 1];
+            }
+            if (typeof elementDataRight !== 'undefined' && Array.isArray(elementDataRight['KH']) && elementDataRight['KH'].length > 0) {
+                khVal = elementDataRight['KH'][elementDataRight['KH'].length - 1];
+            }
+            if (typeof elementDataRight !== 'undefined' && Array.isArray(elementDataRight['CA']) && elementDataRight['CA'].length > 0) {
+                caVal = elementDataRight['CA'][elementDataRight['CA'].length - 1];
+            }
+            if (typeof elementDataRight !== 'undefined' && Array.isArray(elementDataRight['MG']) && elementDataRight['MG'].length > 0) {
+                mgVal = elementDataRight['MG'][elementDataRight['MG'].length - 1];
+            }
+            return {
+                PH: typeof latest.PH === 'number' ? latest.PH : '--',
+                ORP: typeof latest.ORP === 'number' ? latest.ORP : '--',
+                T: typeof latest.T === 'number' ? latest.T : '--',
+                N: nVal,
+                P: pVal,
+                KH: khVal,
+                CA: caVal,
+                MG: mgVal
+            };
+        }
+
+        // 动态设置顶部元素颜色和内容
+        function updateRealtimeInfo() {
+            const latest = getLatestRealtime();
+            const colorMap = {
+                phValue: COLORS.ph,
+                orpValue: COLORS.orp,
+                tempValue: COLORS.t, // 用ph色或COLOR_GREEN
+                nValue: COLORS.n,
+                pValue: COLORS.p,
+                khValue: COLORS.kh,
+                caValue: COLORS.ca,
+                mgValue: COLORS.mg
+            };
+            document.getElementById('phValue').textContent = 'PH: ' + latest.PH;
+            document.getElementById('orpValue').textContent = 'ORP: ' + latest.ORP;
+            document.getElementById('tempValue').textContent = 'Temperature: ' + latest.T;
+            document.getElementById('nValue').textContent = 'N: ' + latest.N;
+            document.getElementById('pValue').textContent = 'P: ' + latest.P;
+            document.getElementById('khValue').textContent = 'Alk: ' + latest.KH;
+            document.getElementById('caValue').textContent = 'CA: ' + latest.CA;
+            document.getElementById('mgValue').textContent = 'MG: ' + latest.MG;
+            // 统一设置颜色和字体
+            Object.keys(colorMap).forEach(id => {
+                const elem = document.getElementById(id);
+                if (elem) {
+                    elem.style.color = colorMap[id];
+                    elem.style.fontFamily = 'Oswald, sans-serif';
+                    elem.style.fontWeight = '700';
+                }
+            });
+        }
+        updateRealtimeInfo();
+
+        // Assign yAxisID: No3 on left, Po4 on right
+        function getAxis(key) {
+            return key === 'N' ? 'yLeft' : 'yRight';
+        }
+        const datasets = elementKeys.map((key, idx) => ({
+            label: key === 'N' ? 'Nitrate' : key === 'P' ? 'Phosphate' : key,
+            data: elementData[key],
+            borderColor: colorPalette[idx % colorPalette.length],
+            fill: false,
+            tension: 0.4,
+            borderWidth: 2,
+            pointRadius: 0,
+            yAxisID: getAxis(key)
+        }));
+
+        // Right chart: all on left axis
+        function getAxisRight(key) {
+            return key === 'KH' ? 'yLeft' : 'yRight';
+        }
+        const datasetsRight = elementKeysRight.map((key, idx) => ({
+            label: key === 'MG' ? 'Magnesium' : key === 'CA' ? 'Calcium' : key === 'KH' ? 'Alk' : key,
+            data: elementDataRight[key],
+            borderColor: colorPalette[(idx+2) % colorPalette.length],
+            fill: false,
+            tension: 0.4,
+            borderWidth: 2,
+            pointRadius: 0,
+            yAxisID: getAxisRight(key)
+        }));
+
+        const myChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: {
+                        ticks: {
+                            font: {
+                                family: 'Oswald',
+                                size: 13
+                            }
+                        },
+                        grid: {
+                            drawTicks: false,
+                            drawOnChartArea: true,
+                            drawBorder: true,
+                            color: 'rgba(180,180,180,0.12)'
+                        }
+                    },
+                    yLeft: {
+                        type: 'linear',
+                        position: 'left',
+                        beginAtZero: true,
+                        suggestedMax: 1.02 * Math.max(...elementData['N'].filter(v => v !== null)),
+
+                        ticks: {
+                            font: {
+                                family: 'Oswald',
+                                size: 14
+                            }
+                        },
+                        grid: {
+                            color: 'rgba(180,180,180,0.12)'
+                        }
+                    },
+                    yRight: {
+                        type: 'linear',
+                        position: 'right',
+                        beginAtZero: true,
+                        suggestedMax: 1.02 * Math.max(...elementData['P'].filter(v => v !== null)),
+                        
+                        ticks: {
+                            font: {
+                                family: 'Oswald',
+                                size: 14
+                            }
+                        },
+                        grid: {
+                            drawOnChartArea: false
+                        }
+                    }
+                },
+                interaction: {
+                    mode: 'nearest',
+                    axis: 'x',
+                    intersect: false
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        enabled: true,
+                        mode: 'index',
+                        intersect: false,
+                        bodyFont: {
+                            family: 'Oswald',
+                            size: 14
+                        },
+                        callbacks: {
+                            label: function(context) {
+                                const key = context.dataset.label;
+                                const idx = context.dataIndex;
+                                let value = 'N/A';
+                                if (originalData[key] && typeof originalData[key][idx] !== 'undefined') {
+                                    value = originalData[key][idx];
+                                }
+                                return key + ': ' + value;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Right chart
+        const myChartRight = new Chart(ctxRight, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: datasetsRight
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: {
+                        ticks: {
+                            font: {
+                                family: 'Oswald',
+                                size: 13
+                            }
+                        },
+                        grid: {
+                            drawTicks: false,
+                            drawOnChartArea: true,
+                            drawBorder: true,
+                            color: 'rgba(180,180,180,0.12)'
+                        }
+                    },
+                    yLeft: {
+                        type: 'linear',
+                        position: 'left',
+                        beginAtZero: true,
+                        suggestedMax: 1.2 * Math.max(...elementDataRight['KH'].filter(v => v !== null)),
+                        
+                        ticks: {
+                            font: {
+                                family: 'Oswald',
+                                size: 14
+                            }
+                        },
+                        grid: {
+                            color: 'rgba(180,180,180,0.12)'
+                        }
+                    },
+                    yRight: {
+                        type: 'linear',
+                        position: 'right',
+                        beginAtZero: true,
+                        suggestedMax: Math.max(
+                            1.1 * Math.max(...elementDataRight['CA'].filter(v => v !== null)),
+                            1.1 * Math.max(...elementDataRight['MG'].filter(v => v !== null))
+                        ),
+                        
+                        ticks: {
+                            font: {
+                                family: 'Oswald',
+                                size: 14
+                            }
+                        },
+                        grid: {
+                            drawOnChartArea: false
+                        }
+                    }
+                },
+                interaction: {
+                    mode: 'nearest',
+                    axis: 'x',
+                    intersect: false
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        enabled: true,
+                        mode: 'index',
+                        intersect: false,
+                        bodyFont: {
+                            family: 'Oswald',
+                            size: 14
+                        },
+                        callbacks: {
+                            label: function(context) {
+                                const key = context.dataset.label;
+                                const idx = context.dataIndex;
+                                let value = 'N/A';
+                                if (originalDataRight[key] && typeof originalDataRight[key][idx] !== 'undefined') {
+                                    value = originalDataRight[key][idx];
+                                }
+                                return key + ': ' + value;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

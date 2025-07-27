@@ -1,0 +1,10 @@
+*.txt
+*.log
+*.json
+*.file
+*.data
+.vscode/
+.DS_Store
+kidcontrol.config
+*pycache*/
+.venv/

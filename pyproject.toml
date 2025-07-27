@@ -1,0 +1,14 @@
+[project]
+name = "reefing-memory"
+version = "0.1.0"
+description = "Keep all the memories of your reef tank in one place."
+authors = [
+    { name = "Jacob.Mi", email = "jacobmee@gmail.com" }
+]
+readme = "README.md"
+requires-python = ">=3.7"
+dependencies = [
+    "Flask",
+    "requests",
+    "numpy"
+] 
