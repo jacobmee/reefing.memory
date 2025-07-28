@@ -40,7 +40,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            flex-shrink: 0; /* Keep this for mobile to prevent shrinking if content is small */
+            flex-shrink: 0;
             width: 100%;
             box-sizing: border-box;
         }
@@ -48,12 +48,12 @@
         /* Heights for canvases on mobile (default) */
         #realtimeChart {
             width: 100%;
-            height: 30vh; /* Mobile height */
+            height: 30vh;
         }
         #staticChartLeft,
         #staticChartRight {
             width: 100%;
-            height: 23vh; /* Mobile height */
+            height: 23vh;
         }
 
         /* Wrapper for the two bottom charts (default stacked on mobile) */
@@ -68,14 +68,19 @@
         /* New styles for the elements list section */
         .elements-list {
             background: #fff;
-            padding: 10px;
+            padding: 20px;
+            padding-top: 15px;
             border-radius: 4px;
             box-shadow: 0 4px 16px rgba(0,0,0,0.08);
             font-family: 'Oswald', sans-serif;
             font-size: 14px;
-            flex-shrink: 0; /* Keep this for mobile */
+            flex-shrink: 0;
             width: 100%;
             box-sizing: border-box;
+            /* --- START MOBILE HEIGHT ADJUSTMENT --- */
+            min-height: 30vh; /* 设定一个最小高度，使其在手机上更高一些 */
+            overflow-y: auto; /* 如果内容溢出，允许垂直滚动 */
+            /* --- END MOBILE HEIGHT ADJUSTMENT --- */
         }
         .elements-list h4 {
             margin: 0 0 15px 0;
@@ -84,18 +89,28 @@
             text-align: center;
             color: #333;
         }
+
+        /* --- START OF CHANGES FOR MOBILE ELEMENTS LIST LAYOUT --- */
         .elements-list ul {
             list-style: none;
             padding: 0;
             margin: 0;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            gap: 8px 32px;
         }
+
         .elements-list li {
             display: flex;
             flex-direction: column;
             align-items: flex-start;
-            margin-bottom: 12px;
-            font-size: 14px;
+            width: calc(50% - 16px);
+            margin-bottom: 0;
+            box-sizing: border-box;
         }
+        /* --- END OF CHANGES FOR MOBILE ELEMENTS LIST LAYOUT --- */
+
         .elements-list li:last-child {
             margin-bottom: 0;
         }
@@ -148,7 +163,7 @@
         .top-section {
             display: flex;
             flex-direction: column; /* Mobile: stack vertically */
-            align-items: flex-start; /* Default for mobile, doesn't stretch */
+            align-items: flex-start;
             gap: 8px;
             width: 100%;
         }
@@ -174,14 +189,13 @@
                 min-height: 80vh;
             }
 
-            /* Desktop heights for canvases - REMOVED fixed height for realtimeChart */
             #realtimeChart {
-                width: 100%; /* Keep 100% width of its parent */
-                height: 100%; /* Make canvas fill its parent card's height */
+                width: 100%;
+                height: 100%;
             }
             #staticChartLeft,
             #staticChartRight {
-                height: 39vh; /* Consistent height for bottom charts */
+                height: 36vh;
             }
 
             .bottom-charts-wrapper {
@@ -195,33 +209,45 @@
             }
 
             .top-section {
-                flex-direction: row; /* Desktop: side-by-side */
-                align-items: stretch; /* KEY CHANGE: Make children stretch to match tallest */
-                height: 55vh; /* NEW: Define a fixed height for the parent top-section */
+                flex-direction: row;
+                align-items: stretch;
+                height: 58vh;
             }
 
             /* Reset order for desktop */
             .top-section .elements-list {
                 order: 0;
-                /* REMOVED explicit height: 55vh; let flexbox handle it */
             }
 
             .top-section .chart-card {
                 order: 0;
                 flex-grow: 1;
-                /* REMOVED explicit height for the card, let flexbox handle it */
             }
 
             .elements-list {
-                width: 300px;
-                /* REMOVED explicit height: 55vh; let flexbox handle it */
-                flex-shrink: 0; /* Prevent shrinking on desktop */
-                flex-basis: 300px; /* Equivalent to width for flex items */
+                width: 280px;
+                flex-shrink: 0;
+                flex-basis: 280px;
+                /* 桌面视图下，min-height会被flexbox的拉伸行为覆盖 */
             }
 
+            /* --- Desktop Specific Overrides for elements-list ul/li --- */
+            .elements-list ul {
+                display: block;
+                gap: 0;
+            }
+            .elements-list li {
+                width: 100%;
+                margin-bottom: 12px;
+            }
+            .elements-list li:last-child {
+                margin-bottom: 0;
+            }
+            /* --- END Desktop Specific Overrides --- */
+
             .chart-card {
-                width: auto; /* Let flexbox control width */
-                flex-grow: 1; /* Allow realtime chart card to grow */
+                width: auto;
+                flex-grow: 1;
             }
         }
     </style>
@@ -546,7 +572,7 @@
                         beginAtZero: false,
                         // Calculate suggestedMax based on actual filtered values
                         suggestedMax: phHourValues.filter(v => v !== null).length > 0 ? 
-                                      1.2 * Math.max(...phHourValues.filter(v => v !== null)) : 10,
+                                      1.1 * Math.max(...phHourValues.filter(v => v !== null)) : 10,
                         ticks: {
                             font: {
                                 family: 'Oswald',
