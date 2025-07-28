@@ -6,7 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://fonts.googleapis.com/css?family=Oswald:300,700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css?family=Roboto:300,700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Lato:300,700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <style>
         /* Base styles for all screen sizes (Mobile-First Approach) */
         body {
@@ -44,7 +46,7 @@
 
         /* Heights for canvases on mobile (default) */
         #realtimeChart {
-            width: 100%;
+            width: 100%; /* Will be overridden by flex-grow in desktop */
             height: 30vh; /* Adjusted height for mobile display */
         }
         #staticChartLeft,
@@ -61,6 +63,94 @@
             flex-grow: 1; /* Allow wrapper to grow if space permits */
         }
 
+        /* New styles for the elements list section */
+        .elements-list {
+            background: #fff;
+            padding: 10px;
+            border-radius: 4px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+            font-family: 'Oswald', sans-serif;
+            font-size: 14px;
+            width: 100%; /* Default for mobile when stacked */
+            flex-shrink: 0;
+            height: 55vh; /* Taller on desktop */
+        }
+        .elements-list h4 {
+            margin: 0 0 15px 0;
+            font-family: 'Lato', sans-serif;
+            font-size: 26px; /* Slightly larger for title */
+            text-align: center; /* Center the title */
+            color: #333; /* Darker color for title */
+        }
+        .elements-list ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .elements-list li {
+            display: flex;
+            flex-direction: column; /* Stack label/percentage and bar vertically */
+            align-items: flex-start; /* Align content to the left */
+            margin-bottom: 12px; /* More spacing between list items */
+            font-size: 14px;
+        }
+        .elements-list li:last-child {
+            margin-bottom: 0; /* No margin for the last item */
+        }
+
+        .element-label-row {
+            display: flex;
+            justify-content: space-between; /* Space between label and percentage */
+            width: 100%; /* Span full width of the list item */
+            margin-bottom: 4px; /* Space between label/percentage and bar */
+        }
+
+        .element-label {
+            font-weight: normal; /* Labels not bold */
+            color: #555;
+        }
+
+        .element-percentage {
+            font-weight: bold;
+            color: #333; /* Darker color for percentage */
+            min-width: 40px; /* Ensure space for percentage */
+            text-align: right;
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            height: 8px;
+            background-color: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+        .progress-bar-threshold {
+            position: absolute;
+            left: 70%;
+            top: 0;
+            width: 2px;
+            height: 100%;
+            background: #888;
+            opacity: 0.7;
+            z-index: 2;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            width: 0%; /* Initial width, will be set by JS */
+            border-radius: 4px; /* Rounded corners for the fill */
+            transition: width 0.5s ease-in-out; /* Smooth transition for width changes */
+        }
+
+        .top-section {
+            display: flex;
+            flex-direction: column; /* Stack elements list and chart vertically on mobile */
+            align-items: flex-start;
+            gap: 8px;
+            width: 100%; /* Ensure it takes full width */
+        }
+
         /* --- Desktop Layout (min-width: 768px) --- */
         @media (min-width: 768px) {
             body {
@@ -68,36 +158,139 @@
             }
 
             .charts-container {
-                /* On desktop, main container still stacks vertically (top chart, then wrapper) */
                 flex-direction: column;
-                min-height: 80vh; /* Ensure consistent min-height */
+                min-height: 80vh;
             }
 
             /* Desktop heights for canvases */
             #realtimeChart {
-                height: 56vh; /* Taller on desktop */
+                height: 55vh; /* Taller on desktop */
             }
             #staticChartLeft,
             #staticChartRight {
-                height: 36vh; /* Consistent height on desktop */
+                height: 35vh; /* Consistent height on desktop */
             }
 
             .bottom-charts-wrapper {
                 flex-direction: row; /* Arrange the two bottom charts horizontally on desktop */
-                flex-grow: 1; /* Allow wrapper to grow to fill space */
-                align-items: stretch; /* Ensure bottom charts have same height */
+                flex-grow: 1;
+                align-items: stretch;
             }
 
             .bottom-charts-wrapper > .chart-card {
-                flex: 1; /* Each bottom chart takes equal width */
+                flex: 1;
+            }
+
+            .top-section {
+                flex-direction: row; /* Arrange elements list and chart horizontally on desktop */
+                align-items: flex-start; /* Align items to the top */
+            }
+
+            .elements-list {
+                width: 250px; /* Fixed width for elements list on desktop */
+                /* Or you can use a percentage: width: 25%; */
+                
+            }
+
+            .top-section .chart-card {
+                flex-grow: 1; /* Realtime chart takes up remaining space */
             }
         }
     </style>
 </head>
 <body>
     <div class="charts-container">
-        <div class="chart-card">
-            <canvas id="realtimeChart"></canvas>
+        <!-- The top-section now correctly uses flexbox to arrange its children -->
+        <div class="top-section">
+            <div class="elements-list">
+                <h4>Reefing Memory</h4>
+                <ul>
+                    <li id="orpElement">
+                        <div class="element-label-row">
+                            <span class="element-label">ORP: </span>
+                            <span class="element-percentage"></span>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar-threshold"></div>
+                            <div class="progress-bar-fill" data-element="orp"></div>
+                        </div>
+                    </li>
+                    <li id="phElement">
+                        <div class="element-label-row">
+                            <span class="element-label">PH: </span>
+                            <span class="element-percentage"></span>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar-threshold"></div>
+                            <div class="progress-bar-fill" data-element="ph"></div>
+                        </div>
+                    </li>
+                    <li id="tempElement">
+                        <div class="element-label-row">
+                            <span class="element-label">Temperature: </span>
+                            <span class="element-percentage"></span>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar-threshold"></div>
+                            <div class="progress-bar-fill" data-element="t"></div>
+                        </div>
+                    </li>
+                    <li id="nElement">
+                        <div class="element-label-row">
+                            <span class="element-label">Nitrate: </span>
+                            <span class="element-percentage"></span>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar-threshold"></div>
+                            <div class="progress-bar-fill" data-element="n"></div>
+                        </div>
+                    </li>
+                    <li id="pElement">
+                        <div class="element-label-row">
+                            <span class="element-label">Phosphate: </span>
+                            <span class="element-percentage"></span>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar-threshold"></div>
+                            <div class="progress-bar-fill" data-element="p"></div>
+                        </div>
+                    </li>
+                    <li id="caElement">
+                        <div class="element-label-row">
+                            <span class="element-label">Calcium: </span>
+                            <span class="element-percentage"></span>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar-threshold"></div>
+                            <div class="progress-bar-fill" data-element="ca"></div>
+                        </div>
+                    </li>
+                    <li id="mgElement">
+                        <div class="element-label-row">
+                            <span class="element-label">Magnesium: </span>
+                            <span class="element-percentage"></span>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar-threshold"></div>
+                            <div class="progress-bar-fill" data-element="mg"></div>
+                        </div>
+                    </li>
+                    <li id="khElement">
+                        <div class="element-label-row">
+                            <span class="element-label">Alkalinity: </span>
+                            <span class="element-percentage"></span>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar-threshold"></div>
+                            <div class="progress-bar-fill" data-element="kh"></div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="chart-card">
+                <canvas id="realtimeChart"></canvas>
+            </div>
         </div>
 
         <div class="bottom-charts-wrapper">
@@ -367,7 +560,7 @@
                     },
                     legend: {
                         display: true,
-                        position: 'top',
+                        position: 'top'
                     },
                     tooltip: {
                         enabled: true,
@@ -625,7 +818,7 @@
                 interaction: { mode: 'nearest', axis: 'x', intersect: false },
                 plugins: {
                     title: { display: false, text: 'Nutrition', font: { family: 'Oswald', size: 14 }, align: 'start' },
-                    legend: { display: true, position: 'top' },
+                    legend: { display: true, position: 'top'},
                     tooltip: {
                         enabled: true, mode: 'index', intersect: false, bodyFont: { family: 'Oswald', size: 14 },
                         callbacks: {
@@ -736,6 +929,130 @@
                 }
             }
         });
+
+        // Dynamically update element values for the elements list
+        const elements = {
+            nElement: 'N',
+            pElement: 'P',
+            caElement: 'CA',
+            mgElement: 'MG',
+            khElement: 'KH',
+            orpElement: 'ORP',
+            phElement: 'PH',
+            tempElement: 'T'
+        };
+
+        // Get latest week label
+        const latestWeek = labels.length > 0 ? labels[labels.length - 1] : null;
+        // Helper to get latest value from weekMap for a key
+        function getLatestWeekValue(key) {
+            if (!latestWeek || !weekMap[latestWeek] || !weekMap[latestWeek][key]) return null;
+            const arr = weekMap[latestWeek][key];
+            if (!arr || arr.length === 0) return null;
+            // Use the last value in the array for the week
+            return arr[arr.length - 1];
+        }
+        // Helper to get latest value from realtimeData for a key
+        function getLatestRealtimeValue(key) {
+            for (let i = realtimeData.length - 1; i >= 0; i--) {
+                const v = realtimeData[i][key];
+                if (v !== undefined && v !== null) return v;
+            }
+            return null;
+        }
+
+        // Update values in the elements list
+        Object.keys(elements).forEach(id => {
+            const element = document.getElementById(id);
+            const key = elements[id];
+            let value = '-';
+
+            if (["N","P","CA","MG","KH"].includes(key)) {
+                const v = getLatestWeekValue(key);
+                value = v !== null && v !== undefined ? v : '-';
+            } else {
+                const v = getLatestRealtimeValue(key);
+                value = v !== null && v !== undefined ? v : '-';
+                // Only show ORP/PH/Temperature if there is a value
+                element.style.display = (value !== '-') ? 'list-item' : 'none';
+            }
+
+            element.querySelector('span').textContent += value;
+        });
+
+        // --- Update Elements List with Data ---
+        // Define max values for percentage calculation
+        const MAX_VALUES = {
+            N: 2,    // Nitrate max for bar (e.g., 20 ppm)
+            P: 0.03,   // Phosphate max for bar (e.g., 0.2 ppm)
+            CA: 400,  // Calcium max for bar (e.g., 500 ppm)
+            MG: 1320, // Magnesium max for bar (e.g., 1500 ppm)
+            KH: 8,   // Alkalinity max for bar (e.g., 12 dKH)
+            ORP: 380, // ORP max for bar (e.g., 450 mV)
+            PH: 8,  // PH max for bar (e.g., 8.5)
+            T: 24  // Temperature max for bar (e.g., 82 F)
+        };
+
+        function updateElementsList() {
+            // Get the latest data for PH, ORP, Temp from realtimeData
+            const latestRealtimeData = realtimeData.length > 0 ? realtimeData[realtimeData.length - 1] : null;
+            
+            // Get the latest averaged data for N, P, CA, MG, KH from chart_data (weekly average)
+            // This is a simplification; ideally, you'd have a separate "latest" data source for these.
+            // For now, we'll use the last week's average from chart_data.
+            const latestWeeklyData = labels.length > 0 ? rawData.find(d => getWeekStart(d.date) === labels[labels.length - 1]) : null;
+
+            const elementsToUpdate = { 
+                N: { id: 'nElement', name: 'Nitrate (N):', value: latestWeeklyData ? latestWeeklyData.N : null, decimals: 1 },
+                P: { id: 'pElement', value: latestWeeklyData ? latestWeeklyData.P : null, decimals: 2 },
+                CA: { id: 'caElement', value: latestWeeklyData ? latestWeeklyData.CA : null, decimals: 0 },
+                MG: { id: 'mgElement', value: latestWeeklyData ? latestWeeklyData.MG : null, decimals: 0 },
+                KH: { id: 'khElement', value: latestWeeklyData ? latestWeeklyData.KH : null, decimals: 1 },
+                ORP: { id: 'orpElement', value: latestRealtimeData ? latestRealtimeData.ORP : null, decimals: 0 },
+                PH: { id: 'phElement', value: latestRealtimeData ? latestRealtimeData.PH : null, decimals: 1 },
+                T: { id: 'tempElement', value: latestRealtimeData ? latestRealtimeData.T : null, decimals: 1 } // Use 'T' for temperature
+            };
+
+            const BAR_FULL_AT = 0.7; // 70% of max is 100% for the bar
+            for (const key in elementsToUpdate) {
+                const elementInfo = elementsToUpdate[key];
+                const listItem = document.getElementById(elementInfo.id);
+                if (listItem) {
+                    const percentageSpan = listItem.querySelector('.element-percentage');
+                    const progressBarFill = listItem.querySelector('.progress-bar-fill');
+                    const value = elementInfo.value;
+                    const maxValue = MAX_VALUES[key];
+
+                    if (value !== null && typeof value === 'number') {
+                        let per_show = (value / (maxValue)) * 100;
+                        let percentage = per_show * BAR_FULL_AT;
+                        percentageSpan.textContent = `${per_show.toFixed(0)}%`;
+                        progressBarFill.style.width = `${percentage}%`;
+                        progressBarFill.style.backgroundColor = COLORS[key.toLowerCase()];
+                        // Set color by range
+                        if (per_show < 50) {
+                            percentageSpan.style.color = '#a259e6'; // purple
+                        } else if (per_show < 80) {
+                            percentageSpan.style.color = '#3b82f6'; // blue
+                        } else if (per_show < 120) {
+                            percentageSpan.style.color = '#22c55e'; // green
+                        } else if (per_show < 150) {
+                            percentageSpan.style.color = '#facc15'; // yellow
+                        } else {
+                            percentageSpan.style.color = '#ef4444'; // red
+                        }
+                    } else {
+                        percentageSpan.textContent = 'N/A';
+                        percentageSpan.style.color = '#333';
+                        progressBarFill.style.width = '0%';
+                        progressBarFill.style.backgroundColor = '#e0e0e0';
+                    }
+                }
+            }
+        }
+
+        // Call update function after charts are initialized or data is loaded
+        updateElementsList();
     </script>
 </body>
 </html>
