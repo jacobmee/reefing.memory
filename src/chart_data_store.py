@@ -75,6 +75,11 @@ class ChartDataStore:
             # 按时间倒序返回所有数据（不限制行数）
             filtered_sorted = sorted(filtered, key=lambda d: d['time'], reverse=True)
             print(f"Processed {len(filtered_sorted)} entries from real-time data after hour grouping")
+
+            # 如果没有数据，返回空列表
+            if not filtered_sorted:
+                return []
+
             return filtered_sorted
         except Exception as e:
             print(f"Error loading real-time data: {e}")
