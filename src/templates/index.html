@@ -2,157 +2,237 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Line Chart Example</title>
+    <title>Reefing Memory</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://fonts.googleapis.com/css?family=Oswald:300,700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css?family=Roboto:300,700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Base styles for all screen sizes (Mobile-First Approach) */
+        body {
+            background: #f3f1f1;
+            min-height: 100vh; /* Use min-height to allow content to extend beyond viewport */
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start; /* Align items to start on mobile for better scrolling */
+        }
+
+        /* Main container for all charts */
+        .charts-container {
+            width: 100%;
+            min-height: 80vh;
+            margin: 4px auto;
+            padding: 4px 8px;
+            display: flex;
+            flex-direction: column; /* Default: stack all charts vertically on mobile */
+            gap: 8px;
+        }
+
+        /* Individual chart card styles */
+        .chart-card {
+            background: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+            padding: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-shrink: 0; /* Prevent cards from shrinking below content */
+        }
+
+        /* Heights for canvases on mobile (default) */
+        #realtimeChart {
+            width: 100%;
+            height: 30vh; /* Adjusted height for mobile display */
+        }
+        #staticChartLeft,
+        #staticChartRight {
+            width: 100%;
+            height: 23vh; /* Adjusted height for mobile display */
+        }
+
+        /* Wrapper for the two bottom charts (default stacked on mobile) */
+        .bottom-charts-wrapper {
+            display: flex;
+            flex-direction: column; /* Stack these two charts vertically on mobile */
+            gap: 8px;
+            flex-grow: 1; /* Allow wrapper to grow if space permits */
+        }
+
+        /* --- Desktop Layout (min-width: 768px) --- */
+        @media (min-width: 768px) {
+            body {
+                align-items: center; /* Center vertically on desktop */
+            }
+
+            .charts-container {
+                /* On desktop, main container still stacks vertically (top chart, then wrapper) */
+                flex-direction: column;
+                min-height: 80vh; /* Ensure consistent min-height */
+            }
+
+            /* Desktop heights for canvases */
+            #realtimeChart {
+                height: 56vh; /* Taller on desktop */
+            }
+            #staticChartLeft,
+            #staticChartRight {
+                height: 36vh; /* Consistent height on desktop */
+            }
+
+            .bottom-charts-wrapper {
+                flex-direction: row; /* Arrange the two bottom charts horizontally on desktop */
+                flex-grow: 1; /* Allow wrapper to grow to fill space */
+                align-items: stretch; /* Ensure bottom charts have same height */
+            }
+
+            .bottom-charts-wrapper > .chart-card {
+                flex: 1; /* Each bottom chart takes equal width */
+            }
+        }
+    </style>
 </head>
-<body style="background: #f3f1f1; height: 100vh; margin: 0; padding: 0; display: flex; justify-content: center; align-items: center;">
-    <div style="width: 100%; min-height: 80vh; margin: 4px auto; padding: 4px 8px; display: flex; flex-direction: column; gap: 8px;">
-        <div style="display: flex; justify-content: center; align-items: center; background: #fff; border-radius: 4px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); padding: 10px;">
-            <canvas id="realtimeChart" style="width:100%; height:54vh;"></canvas>
+<body>
+    <div class="charts-container">
+        <div class="chart-card">
+            <canvas id="realtimeChart"></canvas>
         </div>
-        <div style="display: flex; gap: 8px; justify-content: center; align-items: stretch;">
-            <div style="flex: 1; background: #fff; border-radius: 4px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); padding: 10px; display: flex; justify-content: center; align-items: center;">
-                <canvas id="staticChartLeft" style="width:100%; height:30vh;"></canvas>
+
+        <div class="bottom-charts-wrapper">
+            <div class="chart-card">
+                <canvas id="staticChartLeft"></canvas>
             </div>
-            <div style="flex: 1; background: #fff; border-radius: 4px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); padding: 20px; display: flex; justify-content: center; align-items: center;">
-                <canvas id="staticChartRight" style="width:100%; height:30vh;"></canvas>
+            <div class="chart-card">
+                <canvas id="staticChartRight"></canvas>
             </div>
         </div>
     </div>
     <script>
-        // Real-time chart data
-        const realtimeData = {{ realtime_data|tojson }};
+        // Placeholder for your Jinja2 variables.
+        // In a real Flask/Jinja2 app, these would be populated server-side.
+        const realtimeData = {{ realtime_data|tojson }} || [];
+        const chart_data = {{ chart_data|tojson }} || [];
+
         // Check if realtimeData is empty and hide the chart if true
         if (!realtimeData || realtimeData.length === 0) {
             const realtimeChartContainer = document.getElementById('realtimeChart').parentElement;
             realtimeChartContainer.style.display = 'none';
         }
+
         // Group realtimeData by hour and average PH/ORP for each hour
         function getHour(ts) {
-            // Assumes ts format 'YYYY-MM-DD HH:MM:SS'
-            return ts ? ts.slice(0, 13) + ':00' : '';
+            // Assumes ts format 'YYYY-MM-DD HH:MM:SS' or 'YYYY-MM-DD HH:MM:SS.000Z' (ISO String)
+            // We want 'YYYY-MM-DD HH:00'
+            if (!ts) return '';
+            let dateObj;
+            if (ts.endsWith('Z')) { // It's an ISO string (UTC), convert to local date for consistent hour extraction
+                dateObj = new Date(ts);
+            } else { // Assume it's a local time string or needs parsing
+                // For 'YYYY-MM-DD HH:MM:SS' or 'YYYY-MM-DD HH:MM', parse it directly.
+                // NOTE: Parsing date strings without Z or timezone can be problematic cross-browser.
+                // If 'time' from realtimeData is always a local time, this is okay.
+                // If it's mixed, consider parsing it as UTC first: new Date(ts + 'Z') or specific parsing library.
+                dateObj = new Date(ts.replace(' ', 'T')); // Convert to ISO-like format for safer parsing
+            }
+
+            const year = dateObj.getFullYear();
+            const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+            const day = dateObj.getDate().toString().padStart(2, '0');
+            const hour = dateObj.getHours().toString().padStart(2, '0');
+
+            return `${year}-${month}-${day} ${hour}:00`;
         }
+
         const hourMap = {};
         realtimeData.forEach(d => {
-            const hour = getHour(d.time);
+            const hour = getHour(d.time); // Use the corrected getHour
             if (!hourMap[hour]) hourMap[hour] = { PH: [], ORP: [] };
             if (typeof d.PH === 'number') hourMap[hour].PH.push(d.PH);
             if (typeof d.ORP === 'number') hourMap[hour].ORP.push(d.ORP);
         });
-        // 反转顺序，使左侧为最早日期，右侧为最近日期
-        const hourLabels = Object.keys(hourMap).reverse();
-        // 获取所有有数据的日期
-        // X轴为最近10天所有小时点，无数据则为null
-        function getRecentHours(days) {
+
+        // 获取最近10天所有30分钟点
+        function getRecentHalfHours(days) {
             const result = [];
-            const now = new Date();
+            const now = new Date(); // Current local time
+            // Loop from oldest day (days-1) to current day (0)
             for (let d = days - 1; d >= 0; d--) {
                 let date = new Date(now);
-                date.setDate(now.getDate() - d);
+                date.setDate(now.getDate() - d); // Set to the target day
+                
                 for (let h = 0; h < 24; h++) {
                     for (let m = 0; m < 60; m += 30) {
-                        let dt = new Date(date);
-                        dt.setHours(h, m, 0, 0);
-                        if (dt > now) {
-                            // 如果生成的时间大于当前时间，则不添加
-                            break;
+                        let dt = new Date(date); // Create new Date object for each time point
+                        dt.setHours(h, m, 0, 0); // Set hour, minute, second, millisecond
+
+                        // Only add if the generated time is not in the future
+                        if (dt <= now) {
+                            result.push(dt);
+                        } else {
+                            // If we've passed the current time, no need to generate further points for this day
+                            break; 
                         }
-                        result.push(dt);
                     }
                 }
             }
             return result;
         }
-        const hourObjs = getRecentHours(10);
-        const dateLabels = hourObjs.map(dt => dt.toLocaleString(navigator.language, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }));
 
-        // Define your local formatting options
-        const local_options = {
-            year: 'numeric',
-            month: '2-digit',   // Ensures two digits, e.g., 07
-            day: '2-digit',     // Ensures two digits, e.g., 07
-            hour: '2-digit',    // Ensures two digits, e.g., 09
-            minute: '2-digit',  // Ensures two digits, e.g., 05
-            // No 'second' here, as your target 'YYYY-MM-DD HHM' doesn't include seconds
-            hour12: false       // Use 24-hour format (00-23)
-        };
+        const isMobile = window.matchMedia('(max-width: 768px)').matches;
+        const hourObjs = isMobile ? getRecentHalfHours(5) : getRecentHalfHours(7); // Adjusted for mobile devices
+        
+        // Formats labels for X-axis (e.g., "Jul 28 09:30")
+        const dateLabels = hourObjs.map(dt => dt.toLocaleString(navigator.language, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }));
 
+        // findValueForHour function (already corrected in previous turn)
         function findValueForHour(dt, key) {
             // dt: Date object, key: 'PH' or 'ORP'
-            // target: 'YYYY-MM-DD HHM', where M is minute (00 or 30)
+            // target: 'YYYY-MM-DD HH:MM'
 
-            console.log('original dt:', dt, 'key:', key);
-
-            // 1. Get the local date and time string using toLocaleString()
-            //    This will give you something like "2025/07/28, 09:05" (format depends on user's locale)
-            let formattedLocalTime = dt.toLocaleString(undefined, local_options);
-
-            // 2. Transform this string into the desired 'YYYY-MM-DD HH:MM' format.
-            //    This is crucial for consistent comparison across different user locales.
-            //    We'll extract parts and reassemble to ensure YYYY-MM-DD always.
-
+            // Extract parts of the Date object in local timezone
             const year = dt.getFullYear();
             const month = (dt.getMonth() + 1).toString().padStart(2, '0'); // getMonth() is 0-indexed
             const day = dt.getDate().toString().padStart(2, '0');
             const hours = dt.getHours().toString().padStart(2, '0');
-            const minutes = dt.getMinutes().toString().padStart(2, '0'); // Already 00 or 30 for your case
+            const minutes = dt.getMinutes().toString().padStart(2, '0'); 
 
             // This creates the exact format 'YYYY-MM-DD HH:MM' using local time values
             const ymdhm = `${year}-${month}-${day} ${hours}:${minutes}`;
 
-            // Now, loop through realtimeData to find a match
             for (let i = 0; i < realtimeData.length; i++) {
                 const t = realtimeData[i].time;
                 // Check if realtimeData[i].time starts with our generated local time string
+                // Assuming realtimeData[i].time is also in local time or can be compared this way
                 if (t && t.startsWith(ymdhm)) {
-                    // Return the value if it's a number, otherwise null
                     return typeof realtimeData[i][key] === 'number' ? realtimeData[i][key] : null;
                 }
             }
             return null; // Return null if no match is found
         }
-
+        
         const phHourValues = hourObjs.map(dt => findValueForHour(dt, 'PH'));
         const orpHourValues = hourObjs.map(dt => findValueForHour(dt, 'ORP'));
 
-
         const realtimeElem = document.getElementById('realtimeChart');
-        let lastLabel = "Jan 1";
-        // 只设置宽度，保持高度由CSS控制
-        realtimeElem.width = realtimeElem.parentElement.offsetWidth;
-        const ctxRealtime = realtimeElem.getContext('2d');
-        // 统一颜色常量
-        const COLOR_GREEN = 'rgba(0, 200, 80, 1)';
-        const COLOR_BLUE = 'rgba(54, 162, 235, 1)';
-        const COLOR_RED = 'rgba(255, 99, 132, 1)';
-        const COLOR_YELLOW = 'rgba(255, 206, 86, 1)';
-        const COLOR_TEAL = 'rgba(75, 192, 192, 1)';
-        const COLOR_PURPLE = 'rgba(153, 102, 255, 1)';
-        const COLOR_ORANGE = 'rgba(255, 159, 64, 0.24)';
-        const COLOR_PINK = 'rgba(255, 105, 180, 1)';
-        const COLOR_BROWN = 'rgba(160, 82, 45, 1)';
-        const COLOR_GRAY = 'rgba(128, 128, 128, 0.12)';
-        const COLOR_BLACK = 'rgba(0, 0, 0, 1)';
-        const COLOR_CYAN = 'rgba(0, 255, 255, 1)';
-        const COLOR_LIME = 'rgba(50, 205, 50, 1)';
-        const COLOR_GOLD = 'rgba(255, 215, 0, 1)';
+        let lastLabel = ""; // Renamed from lastLabel to be more specific (lastDayLabel) for X-axis callback
+
+        // Unified color constants
+        const COLORS = {
+            ph: 'rgba(255, 159, 64, 0.24)',  // Orange
+            orp: 'rgba(54, 162, 235, 1)', // Blue
+            n: 'rgba(75, 192, 192, 1)',   // Teal
+            p: 'rgba(255, 99, 132, 1)',   // Red
+            ca: 'rgba(255, 206, 86, 1)',  // Yellow
+            mg: 'rgba(128, 128, 128, 0.12)', // Gray (changed from transparent for better visibility)
+            kh: 'rgba(153, 102, 255, 1)', // Purple
+            t: 'rgba(0, 200, 80, 1)',     // Green (used for temp, but not in current charts)
+        }; 
 
         const skipped = (ctx, value) => ctx.p0.skip || ctx.p1.skip ? value : undefined;
 
-        const COLORS = {
-            ph: COLOR_ORANGE,
-            orp: COLOR_BLUE,
-            n: COLOR_TEAL,
-            p: COLOR_RED,
-            ca: COLOR_YELLOW,
-            mg: COLOR_GRAY,
-            kh: COLOR_PURPLE,
-            t: COLOR_GREEN,
-        };
-
-        const realtimeChart = new Chart(ctxRealtime, {
+        const realtimeChart = new Chart(realtimeElem.getContext('2d'), {
             type: 'line',
             data: {
                 labels: dateLabels,
@@ -161,14 +241,14 @@
                         label: 'PH',
                         data: phHourValues,
                         borderColor: COLORS.ph,
-                        backgroundColor: COLORS.ph, // Add transparency for fill color
+                        backgroundColor: COLORS.ph.replace('1)', '0.2)'), // Add transparency for fill color
                         fill: true, // Enable area fill
                         tension: 0.4,
                         borderWidth: 2,
                         pointRadius: 0,
                         pointHoverRadius: 6,
                         yAxisID: 'yLeft',
-                        spanGaps: true,
+                        spanGaps: true, // Connect null points
                         segment: {
                             borderColor: ctx => skipped(ctx, 'rgb(0,0,0,0.2)'),
                             borderDash: ctx => skipped(ctx, [6, 6]),
@@ -178,13 +258,14 @@
                         label: 'ORP',
                         data: orpHourValues,
                         borderColor: COLORS.orp,
-                        fill: false,
+                        backgroundColor: COLORS.orp.replace('1)', '0.2)'),
+                        fill: false, // Do not fill area for ORP
                         tension: 0.4,
                         borderWidth: 3,
                         pointRadius: 0,
                         pointHoverRadius: 6,
                         yAxisID: 'yRight',
-                        spanGaps: true,
+                        spanGaps: true, // Connect null points
                         segment: {
                             borderColor: ctx => skipped(ctx, 'rgb(0,0,0,0.2)'),
                             borderDash: ctx => skipped(ctx, [6, 6]),
@@ -194,6 +275,7 @@
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false, // Allow CSS to control height
                 interaction: {
                     mode: 'index',
                     axis: 'x',
@@ -206,44 +288,45 @@
                                 family: 'Oswald',
                                 size: 12
                             },
-                            autoSkip: false,
+                            autoSkip: false, // We control skipping manually
                             callback: function(value, index, ticks) {
-                                // 调试输出 value, index, label
-                                const label = this.getLabelForValue(value);
-                                const labelParts = label.split(', ')[0];
+                                // Get the full label string (e.g., "Jul 28 12:00 AM")
+                                const fullLabel = this.getLabelForValue(value);
+                                // Extract just the date part (e.g., "Jul 28")
+                                const datePart = fullLabel.split(' ')[0] + ' ' + fullLabel.split(' ')[1];
                                 
-                                // 只显示label包含', 12 AM'的点，且只显示日期部分
-                                if (label.includes('12 AM')) {
-                                    if (lastLabel !== labelParts) {
-                                        lastLabel = labelParts;
-                                        return labelParts;
-                                    } 
-                                }
-                                return '';
+                                // Only display label if it's 12 AM (midnight) for a new day
+                                // and if the date part hasn't been displayed before
+                                if (fullLabel.includes('12 AM') && datePart !== lastLabel) {
+                                    lastLabel = datePart; // Update last displayed date
+                                    return datePart;
+                                } 
+                                return ''; // Hide other labels
                             }
                         },
                         grid: {
-                            // 使用回调函数控制 lineWidth
                             lineWidth: function(context) {
-                                // context.index 是当前网格线的索引
-                                // 例如，只显示偶数索引的竖线
-                                if (context.index % 24 === 0) {
-                                    return 1; // 显示线宽为 1px 的竖线
+                                // Draw a grid line only at the start of a new day (every 48 half-hour points)
+                                // hourObjs are 0-indexed, so 0, 48, 96 etc will be 12 AM of each day.
+                                const dt = hourObjs[context.index];
+                                if (dt && dt.getHours() === 0 && dt.getMinutes() === 0) {
+                                     return 1;
                                 }
-                                return 0; // 隐藏（线宽为 0）
+                                return 0;
                             },
-                            color: 'rgba(180,180,180,0.12)', // 设置淡灰色竖线
+                            color: 'rgba(180,180,180,0.12)',
                             drawTicks: false,
                             drawOnChartArea: true,
                             drawBorder: true
                         }
-                        
                     },
                     yLeft: {
                         type: 'linear',
                         position: 'left',
                         beginAtZero: false,
-                        suggestedMax: 1.2 * Math.max(...phHourValues.filter(v => v !== null)),
+                        // Calculate suggestedMax based on actual filtered values
+                        suggestedMax: phHourValues.filter(v => v !== null).length > 0 ? 
+                                      1.2 * Math.max(...phHourValues.filter(v => v !== null)) : 10,
                         ticks: {
                             font: {
                                 family: 'Oswald',
@@ -258,100 +341,130 @@
                         type: 'linear',
                         position: 'right',
                         beginAtZero: false,
-                        suggestedMax: 1.002 * Math.max(...orpHourValues.filter(v => v !== null)),
+                        // Calculate suggestedMax based on actual filtered values
+                        suggestedMax: orpHourValues.filter(v => v !== null).length > 0 ?
+                                      1.002 * Math.max(...orpHourValues.filter(v => v !== null)) : 500,
                         ticks: {
                             font: {
                                 family: 'Oswald',
                                 size: 14
+                            },
+                            callback: function(value) {
+                                return value.toFixed(0); // Show ORP as whole numbers
                             }
                         },
                         grid: {
-                            drawOnChartArea: false
+                            drawOnChartArea: false // Hide horizontal grid lines for right Y-axis
                         }
                     }
                 },
                 plugins: {
                     title: {
-                        display: false, // Enable title
-                        text: 'Real Time Tracking', // Title for the right chart
-                        font: {
-                            family: 'Oswald',
-                            size: 14
-                        },
+                        display: false,
+                        text: 'Real Time Tracking',
+                        font: { family: 'Oswald', size: 14 },
                         align: 'top'
                     },
                     legend: {
-                        display: true, // Enable legend
-                        position: 'top', // Position legend at the top
+                        display: true,
+                        position: 'top',
                     },
                     tooltip: {
                         enabled: true,
                         mode: 'index',
                         intersect: false,
-                        bodyFont: {
-                            family: 'Oswald',
-                            size: 14
-                        },
+                        bodyFont: { family: 'Oswald', size: 14 },
                         callbacks: {
                             title: function(context) {
                                 // context[0] is the hovered item
                                 const idx = context[0].dataIndex;
-                                const dt = hourObjs[idx];
-                                let timeLabel = '';
+                                const dt = hourObjs[idx]; // Get the original Date object
+                                
                                 if (dt instanceof Date) {
-                                    const month = dt.toLocaleString('en-US', { month: 'short' });
-                                    const day = dt.getDate();
-                                    let hour = dt.getHours();
-                                    let minute = dt.getMinutes();
-                                    let ampm = hour >= 12 ? 'PM' : 'AM';
-                                    hour = hour % 12;
-                                    if (hour === 0) hour = 12;
-                                    timeLabel = `${month} ${day} ${hour}:${minute.toString().padStart(2, '0')}${ampm}`;
+                                    // Use toLocaleString for a user-friendly timestamp in their locale
+                                    return dt.toLocaleString(navigator.language, { 
+                                        month: 'short', 
+                                        day: 'numeric', 
+                                        hour: '2-digit', 
+                                        minute: '2-digit', 
+                                        hour12: true 
+                                    });
                                 }
-                                return timeLabel;
+                                return '';
                             },
                             label: function(context) {
                                 const key = context.dataset.label;
-                                const idx = context.dataIndex;
-                                let value = 'N/A';
-                                if (key === 'ORP' && typeof orpHourValues[idx] !== 'undefined') {
-                                    value = orpHourValues[idx];
-                                } else if (key === 'PH' && typeof phHourValues[idx] !== 'undefined') {
-                                    value = phHourValues[idx];
+                                const value = context.parsed.y;
+                                let formattedValue = 'N/A';
+
+                                if (value !== null) {
+                                    switch (key) {
+                                        case 'Nitrate': // N
+                                            formattedValue = value.toFixed(1);
+                                            break;
+                                        case 'Phosphate': // P
+                                            formattedValue = value.toFixed(2);
+                                            break;
+                                        case 'Calcium': // CA
+                                            formattedValue = value.toFixed(0);
+                                            break;
+                                        case 'Magnesium': // MG
+                                            formattedValue = value.toFixed(0);
+                                            break;
+                                        case 'Alk': // KH
+                                            formattedValue = value.toFixed(1);
+                                            break;
+                                        case 'ORP':
+                                            formattedValue = value.toFixed(0);
+                                            break;
+                                        case 'PH':
+                                            formattedValue = value.toFixed(1);
+                                            break;
+                                        default:
+                                            formattedValue = value.toString();
+                                    }
                                 }
-                                return `${key}: ${value}`;
+
+                                return `${key}: ${formattedValue}`;
                             }
                         }
                     }
                 }
             }
         });
-        const rawData = {{ chart_data|tojson }};
+
+        const rawData = {{ chart_data|tojson }} || [];
         const chartElem = document.getElementById('staticChartLeft');
         const chartRightElem = document.getElementById('staticChartRight');
-        // Set canvas to fill parent div
-        chartElem.width = chartElem.parentElement.offsetWidth;
-        chartElem.height = chartElem.parentElement.offsetHeight;
-        chartRightElem.width = chartRightElem.parentElement.offsetWidth;
-        chartRightElem.height = chartRightElem.parentElement.offsetHeight;
+        
         const ctx = chartElem.getContext('2d');
         const ctxRight = chartRightElem.getContext('2d');
+
         const colorPalette = [
-            COLORS.n, // blue
-            COLORS.p, // red
-            COLORS.ca, // yellow
-            COLORS.mg, // teal
-            COLORS.kh, // purple
-            COLORS.orange // orange
+            COLORS.n, // Nitrate (Teal)
+            COLORS.p, // Phosphate (Red)
+            COLORS.ca, // Calcium (Yellow)
+            COLORS.mg, // Magnesium (Gray)
+            COLORS.kh, // Alkalinity (Purple)
         ];
 
-        // Helper to get week start from date string (assumes format 'Mon DD')
+        // Helper to get week start from date string (assumes format like "Mon DD" or 'YYYY-MM-DD')
+        // We'll try to parse it more robustly
         function getWeekStart(dateStr) {
-            const d = new Date(dateStr + ', 2025');
-            const day = d.getDay();
-            const diff = d.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is Sunday
+            // First, try to parse as ISO-like, then get the date
+            let d;
+            if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) { // YYYY-MM-DD format
+                d = new Date(dateStr + 'T00:00:00'); // Ensure it's treated as a local date
+            } else { // Assume it's "Mon DD"
+                d = new Date(dateStr + ', ' + new Date().getFullYear()); // Add current year for parsing
+            }
+            
+            const dayOfWeek = d.getDay(); // 0 for Sunday, 1 for Monday, ..., 6 for Saturday
+            const diff = d.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // Adjust to Monday of the current week (or previous if Sunday)
             const monday = new Date(d.setDate(diff));
-            return monday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            
+            // Format to "Mon DD" for labels
+            return monday.toLocaleDateString(navigator.language, { month: 'short', day: 'numeric' });
         }
 
         // Group all entries by week
@@ -360,7 +473,7 @@
             const week = getWeekStart(d.date);
             if (!weekMap[week]) weekMap[week] = {};
             ['N','P','CA','MG','KH'].forEach(key => {
-                if (d[key] !== undefined) {
+                if (typeof d[key] === 'number') { // Only push if it's a number
                     if (!weekMap[week][key]) weekMap[week][key] = [];
                     weekMap[week][key].push(d[key]);
                 }
@@ -373,9 +486,14 @@
             return parseFloat((arr.reduce((a,b) => a+b,0) / arr.length).toFixed(2));
         }
 
-        const labels = Object.keys(weekMap);
-        const elementKeys = ['N', 'P'];
+        const labels = Object.keys(weekMap).sort((a,b) => {
+            // Custom sort for "Mon DD" format
+            const dateA = new Date(a + ', ' + new Date().getFullYear());
+            const dateB = new Date(b + ', ' + new Date().getFullYear());
+            return dateA - dateB;
+        });
 
+        const elementKeys = ['N', 'P']; // Left Chart Elements
         const elementData = {};  
         elementKeys.forEach(key => {
             elementData[key] = labels.map(week => {
@@ -384,7 +502,7 @@
             });
         });
 
-        const elementKeysRight = ['CA', 'MG', 'KH'];
+        const elementKeysRight = ['CA', 'MG', 'KH']; // Right Chart Elements
         const elementDataRight = {};
         elementKeysRight.forEach(key => {
             elementDataRight[key] = labels.map(week => {
@@ -393,76 +511,67 @@
             });
         });
 
-        // Store original data for tooltips
-        const originalData = elementData;
-        const originalDataRight = elementDataRight;
-
-        // 获取最新的PH、ORP、温度和元素周均值
-        function getLatestRealtime() {
-            if (!realtimeData || realtimeData.length === 0) return { PH: '--', ORP: '--', T: '--', N: '--', P: '--', KH: '--', CA: '--', MG: '--' };
-            // 按时间倒序
-            const sorted = [...realtimeData].sort((a, b) => (b.time > a.time ? 1 : -1));
-            const latest = sorted[0];
-
-            return {
-                PH: typeof latest.PH === 'number' ? latest.PH : '--',
-                ORP: typeof latest.ORP === 'number' ? latest.ORP : '--',
-                T: typeof latest.T === 'number' ? latest.T : '--'
-            };
-        }
-
-        // Assign yAxisID: No3 on left, Po4 on right
-        function getAxis(key) {
+        // Assign yAxisID: No3 on left, Po4 on right for the left chart
+        function getAxisLeftChart(key) {
             return key === 'N' ? 'yLeft' : 'yRight';
         }
         const datasetsLeft = elementKeys.map((key, idx) => ({
-            label: key === 'N' ? 'Nitrate' : key === 'P' ? 'Phosphate' : key,
+            label: key === 'N' ? 'Nitrate' : 'Phosphate', // Assuming only N and P here
             data: elementData[key],
-            borderColor: colorPalette[idx % colorPalette.length],
-            backgroundColor: colorPalette[idx % colorPalette.length].replace('1)', '0.2)'), // Add transparency for fill color
-            fill: true, // Enable area fill
+            borderColor: COLORS[key.toLowerCase()], // Use predefined colors
+            backgroundColor: COLORS[key.toLowerCase()].replace('1)', '0.2)'),
+            fill: true,
             tension: 0.4,
-            borderWidth: 2, // Reduced line thickness
+            borderWidth: 2,
             pointRadius: 0,
-            yAxisID: getAxis(key),
+            pointHoverRadius: 6,
+            yAxisID: getAxisLeftChart(key),
+            spanGaps: true,
             segment: {
                 borderColor: ctx => skipped(ctx, 'rgb(0,0,0,0.2)'),
                 borderDash: ctx => skipped(ctx, [6, 6]),
             }
         }));
 
-        // Right chart: all on left axis
-        function getAxisRight(key) {
+        // Right chart: CA and MG as stacked bars, KH as line
+        function getAxisRightChart(key) {
+            // CA and MG might share one axis (right), KH on another (left)
             return key === 'KH' ? 'yLeft' : 'yRight';
         }
         const datasetsRight = elementKeysRight.map((key, idx) => {
+            const baseColor = colorPalette[(idx + 2) % colorPalette.length]; // Re-use color palette or define more
             if (key === 'MG' || key === 'CA') {
                 return {
                     label: key === 'MG' ? 'Magnesium' : 'Calcium',
                     data: elementDataRight[key],
-                    backgroundColor: colorPalette[(idx + 2) % colorPalette.length],
+                    backgroundColor: COLORS[key.toLowerCase()],
                     type: 'bar',
-                    stack: 'Stack 1',
-                    yAxisID: getAxisRight(key),
+                    stack: 'elementsStack', // All bars that should stack use the same stack ID
+                    yAxisID: getAxisRightChart(key),
+                    order: 1,
                     segment: {
-                            borderColor: ctx => skipped(ctx, 'rgb(0,0,0,0.2)'),
-                            borderDash: ctx => skipped(ctx, [6, 6]),
+                        borderColor: ctx => skipped(ctx, 'rgb(0,0,0,0.2)'),
+                        borderDash: ctx => skipped(ctx, [6, 6]),
                     }
                 };
-            } else {
+            } else { // KH
                 return {
-                    label: key === 'KH' ? 'Alk' : key,
+                    label: 'Alk', // Label for KH
                     data: elementDataRight[key],
-                    borderColor: colorPalette[(idx + 2) % colorPalette.length],
+                    borderColor: COLORS.kh,
+                    backgroundColor: COLORS.kh.replace('1)', '0.2)'),
                     fill: false,
                     type: 'line',
                     tension: 0.4,
                     borderWidth: 2,
                     pointRadius: 0,
-                    yAxisID: getAxisRight(key),
+                    pointHoverRadius: 6,
+                    yAxisID: getAxisRightChart(key),
+                    spanGaps: true,
+                    order: 0,
                     segment: {
-                            borderColor: ctx => skipped(ctx, 'rgb(0,0,0,0.2)'),
-                            borderDash: ctx => skipped(ctx, [6, 6]),
+                        borderColor: ctx => skipped(ctx, 'rgb(0,0,0,0.2)'),
+                        borderDash: ctx => skipped(ctx, [6, 6]),
                     }
                 };
             }
@@ -476,12 +585,15 @@
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false, // Allow CSS to control height
                 scales: {
                     x: {
                         ticks: {
-                            font: {
-                                family: 'Oswald',
-                                size: 13
+                            font: { family: 'Oswald', size: 13 },
+                            // Improve X-axis label display for weeks
+                            callback: function(value, index, ticks) {
+                                // Only display every X labels if too many, or always if few
+                                return this.getLabelForValue(value);
                             }
                         },
                         grid: {
@@ -495,85 +607,47 @@
                         type: 'linear',
                         position: 'left',
                         beginAtZero: true,
-                        suggestedMax: 1.3 * Math.max(...elementData['N'].filter(v => v !== null)),
-
-                        ticks: {
-                            font: {
-                                family: 'Oswald',
-                                size: 14
-                            }
-                        },
-                        grid: {
-                            color: 'rgba(180,180,180,0.12)'
-                        }
+                        suggestedMax: elementData['N'].filter(v => v !== null).length > 0 ? 
+                                      1.3 * Math.max(...elementData['N'].filter(v => v !== null)) : 10,
+                        ticks: { font: { family: 'Oswald', size: 14 } },
+                        grid: { color: 'rgba(180,180,180,0.12)' }
                     },
                     yRight: {
                         type: 'linear',
                         position: 'right',
                         beginAtZero: true,
-                        suggestedMax: 1.1 * Math.max(...elementData['P'].filter(v => v !== null)),
-                        
-                        ticks: {
-                            font: {
-                                family: 'Oswald',
-                                size: 14
-                            }
-                        },
-                        grid: {
-                            drawOnChartArea: false
-                        }
+                        suggestedMax: elementData['P'].filter(v => v !== null).length > 0 ? 
+                                      1.1 * Math.max(...elementData['P'].filter(v => v !== null)) : 0.2,
+                        ticks: { font: { family: 'Oswald', size: 14 } },
+                        grid: { drawOnChartArea: false }
                     }
                 },
-                interaction: {
-                    mode: 'nearest',
-                    axis: 'x',
-                    intersect: false
-                },
+                interaction: { mode: 'nearest', axis: 'x', intersect: false },
                 plugins: {
-                    title: {
-                        display: false, // Enable title
-                        text: 'Nutrition', // Title for the left chart
-                        font: {
-                            family: 'Oswald',
-                            size: 14
-                        },
-                        align: 'start'
-                    },
-                    legend: {
-                        display: true, // Enable legend
-                        position: 'top', // Position legend at the top
-                    },
+                    title: { display: false, text: 'Nutrition', font: { family: 'Oswald', size: 14 }, align: 'start' },
+                    legend: { display: true, position: 'top' },
                     tooltip: {
-                        enabled: true,
-                        mode: 'index',
-                        intersect: false,
-                        bodyFont: {
-                            family: 'Oswald',
-                            size: 14
-                        },
+                        enabled: true, mode: 'index', intersect: false, bodyFont: { family: 'Oswald', size: 14 },
                         callbacks: {
                             label: function(context) {
-                                // label 映射到数据 key
-                                const labelMap = {
-                                    'Nitrate': 'N',
-                                    'Phosphate': 'P',
-                                    'Calcium': 'CA',
-                                    'Magnesium': 'MG',
-                                    'Alk': 'KH',
-                                    'KH': 'KH',
-                                    'CA': 'CA',
-                                    'MG': 'MG',
-                                    'N': 'N',
-                                    'P': 'P'
-                                };
-                                let key = context.dataset.label;
-                                key = labelMap[key] || key;
-                                const idx = context.dataIndex;
-                                let value = 'N/A';
-                                if (originalData[key] && typeof originalData[key][idx] !== 'undefined') {
-                                    value = originalData[key][idx];
+                                const key = context.dataset.label === 'Nitrate' ? 'N' : 'P';
+                                const value = context.parsed.y;
+                                let formattedValue = 'N/A';
+
+                                if (value !== null) {
+                                    switch (key) {
+                                        case 'Nitrate': // N
+                                            formattedValue = value.toFixed(1);
+                                            break;
+                                        case 'Phosphate': // P
+                                            formattedValue = value.toFixed(2);
+                                            break;
+                                        default:
+                                            formattedValue = value.toString();
+                                    }
                                 }
-                                return context.dataset.label + ': ' + value;
+
+                                return `${context.dataset.label}: ${formattedValue}`;
                             }
                         }
                     }
@@ -583,115 +657,79 @@
 
         // Right chart
         const myChartRight = new Chart(ctxRight, {
-            type: 'bar', // Set the default type to bar for stacked bars
+            type: 'bar', // Default type for this chart
             data: {
                 labels: labels,
                 datasets: datasetsRight
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false, // Allow CSS to control height
                 scales: {
                     x: {
-                        stacked: true, // Enable stacking for x-axis
-                        ticks: {
-                            font: {
-                                family: 'Oswald',
-                                size: 13
-                            }
-                        },
-                        grid: {
-                            drawTicks: false,
-                            drawOnChartArea: true,
-                            drawBorder: true,
-                            color: 'rgba(180,180,180,0.12)'
-                        }
+                        stacked: true, // Enable stacking for bars on x-axis
+                        ticks: { font: { family: 'Oswald', size: 13 } },
+                        grid: { drawTicks: false, drawOnChartArea: true, drawBorder: true, color: 'rgba(180,180,180,0.12)' }
                     },
-                    yLeft: {
+                    yLeft: { // For KH (Alk)
                         type: 'linear',
                         position: 'left',
-                        beginAtZero: true,
-                        stacked: false, // Disable stacking for yLeft
-                        suggestedMax: 1.15 * Math.max(...elementDataRight['KH'].filter(v => v !== null)),
-                        ticks: {
-                            font: {
-                                family: 'Oswald',
-                                size: 14
-                            }
-                        },
-                        grid: {
-                            color: 'rgba(180,180,180,0.12)'
-                        }
+                        beginAtZero: false, // Alk might not start at zero
+                        suggestedMax: elementDataRight['KH'].filter(v => v !== null).length > 0 ? 
+                                      1.05 * Math.max(...elementDataRight['KH'].filter(v => v !== null)) : 10,
+                        ticks: { font: { family: 'Oswald', size: 14 } },
+                        grid: { color: 'rgba(180,180,180,0.12)' }
                     },
-                    yRight: {
+                    yRight: { // For CA, MG (stacked bars)
                         type: 'linear',
                         position: 'right',
                         beginAtZero: true,
-                        stacked: false, // Enable stacking for yRight
+                        stacked: false, // y-axis itself is not stacked, individual datasets are
                         suggestedMax: Math.max(
-                            1 * Math.max(...elementDataRight['CA'].filter(v => v !== null)),
-                            1 * Math.max(...elementDataRight['MG'].filter(v => v !== null))
-                        ),
-                        ticks: {
-                            font: {
-                                family: 'Oswald',
-                                size: 14
-                            }
-                        },
-                        grid: {
-                            drawOnChartArea: false
-                        }
+                            elementDataRight['CA'].filter(v => v !== null).length > 0 ? Math.max(...elementDataRight['CA'].filter(v => v !== null)) : 0,
+                            elementDataRight['MG'].filter(v => v !== null).length > 0 ? Math.max(...elementDataRight['MG'].filter(v => v !== null)) : 0
+                        ) * 1.1, // Adjusted max for stacked bars
+                        ticks: { font: { family: 'Oswald', size: 14 } },
+                        grid: { drawOnChartArea: false }
                     }
                 },
-                interaction: {
-                    mode: 'nearest',
-                    axis: 'x',
-                    intersect: false
-                },
+                interaction: { mode: 'nearest', axis: 'x', intersect: false },
                 plugins: {
-                    title: {
-                        display: false, // Enable title
-                        text: 'Huge Elements', // Title for the right chart
-                        font: {
-                            family: 'Oswald',
-                            size: 14
-                        },
-                        align: 'top'
-                    },
-                    legend: {
-                        display: true, // Enable legend
-                        position: 'top', // Position legend at the top
-                    },
+                    title: { display: false, text: 'Huge Elements', font: { family: 'Oswald', size: 14 }, align: 'top' },
+                    legend: { display: true, position: 'top' },
                     tooltip: {
-                        enabled: true,
-                        mode: 'index',
-                        intersect: false,
-                        bodyFont: {
-                            family: 'Oswald',
-                            size: 14
-                        },
+                        enabled: true, mode: 'index', intersect: false, bodyFont: { family: 'Oswald', size: 14 },
                         callbacks: {
                             label: function(context) {
-                                // label 映射到数据 key
-                                const labelMap = {
-                                    'Nitrate': 'N',
-                                    'Phosphate': 'P',
-                                    'Calcium': 'CA',
-                                    'Magnesium': 'MG',
-                                    'Alk': 'KH',
-                                    'KH': 'KH',
-                                    'CA': 'CA',
-                                    'MG': 'MG',
-                                    'N': 'N',
-                                    'P': 'P'
-                                };
-                                let key = context.dataset.label;
-                                key = labelMap[key] || key;
-                                const idx = context.dataIndex;
-                                let value = 'N/A';
-                                if (originalDataRight[key] && typeof originalDataRight[key][idx] !== 'undefined') {
-                                    value = originalDataRight[key][idx];
+                                // Map label to original key
+                                const labelMap = { 'Calcium': 'CA', 'Magnesium': 'MG', 'Alk': 'KH' };
+                                const key = labelMap[context.dataset.label] || context.dataset.label;
+                                const value = context.parsed.y;
+                                let formattedValue = 'N/A';
+
+                                if (value !== null) {
+                                    switch (key) {
+                                        case 'Nitrate': // N
+                                            formattedValue = value.toFixed(1);
+                                            break;
+                                        case 'Phosphate': // P
+                                            formattedValue = value.toFixed(2);
+                                            break;
+                                        case 'Calcium': // CA
+                                            formattedValue = value.toFixed(0);
+                                            break;
+                                        case 'Magnesium': // MG
+                                            formattedValue = value.toFixed(0);
+                                            break;
+                                        case 'Alk': // KH
+                                            formattedValue = value.toFixed(1);
+                                            break;
+                                        default:
+                                            formattedValue = value.toString();
+                                    }
                                 }
-                                return context.dataset.label + ': ' + value;
+
+                                return `${context.dataset.label}: ${formattedValue}`;
                             }
                         }
                     }
