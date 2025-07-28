@@ -8,17 +8,16 @@
     <link href="https://fonts.googleapis.com/css?family=Roboto:300,700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css?family=Lato:300,700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
     <style>
         /* Base styles for all screen sizes (Mobile-First Approach) */
         body {
             background: #f3f1f1;
-            min-height: 100vh; /* Use min-height to allow content to extend beyond viewport */
+            min-height: 100vh;
             margin: 0;
             padding: 0;
             display: flex;
             justify-content: center;
-            align-items: flex-start; /* Align items to start on mobile for better scrolling */
+            align-items: flex-start;
         }
 
         /* Main container for all charts */
@@ -28,7 +27,7 @@
             margin: 4px auto;
             padding: 4px 8px;
             display: flex;
-            flex-direction: column; /* Default: stack all charts vertically on mobile */
+            flex-direction: column;
             gap: 8px;
         }
 
@@ -41,26 +40,29 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            flex-shrink: 0; /* Prevent cards from shrinking below content */
+            flex-shrink: 0; /* Keep this for mobile to prevent shrinking if content is small */
+            width: 100%;
+            box-sizing: border-box;
         }
 
         /* Heights for canvases on mobile (default) */
         #realtimeChart {
-            width: 100%; /* Will be overridden by flex-grow in desktop */
-            height: 30vh; /* Adjusted height for mobile display */
+            width: 100%;
+            height: 30vh; /* Mobile height */
         }
         #staticChartLeft,
         #staticChartRight {
             width: 100%;
-            height: 23vh; /* Adjusted height for mobile display */
+            height: 23vh; /* Mobile height */
         }
 
         /* Wrapper for the two bottom charts (default stacked on mobile) */
         .bottom-charts-wrapper {
             display: flex;
-            flex-direction: column; /* Stack these two charts vertically on mobile */
+            flex-direction: column;
             gap: 8px;
-            flex-grow: 1; /* Allow wrapper to grow if space permits */
+            flex-grow: 1;
+            width: 100%;
         }
 
         /* New styles for the elements list section */
@@ -71,16 +73,16 @@
             box-shadow: 0 4px 16px rgba(0,0,0,0.08);
             font-family: 'Oswald', sans-serif;
             font-size: 14px;
-            width: 100%; /* Default for mobile when stacked */
-            flex-shrink: 0;
-            height: 55vh; /* Taller on desktop */
+            flex-shrink: 0; /* Keep this for mobile */
+            width: 100%;
+            box-sizing: border-box;
         }
         .elements-list h4 {
             margin: 0 0 15px 0;
             font-family: 'Lato', sans-serif;
-            font-size: 26px; /* Slightly larger for title */
-            text-align: center; /* Center the title */
-            color: #333; /* Darker color for title */
+            font-size: 26px;
+            text-align: center;
+            color: #333;
         }
         .elements-list ul {
             list-style: none;
@@ -89,31 +91,31 @@
         }
         .elements-list li {
             display: flex;
-            flex-direction: column; /* Stack label/percentage and bar vertically */
-            align-items: flex-start; /* Align content to the left */
-            margin-bottom: 12px; /* More spacing between list items */
+            flex-direction: column;
+            align-items: flex-start;
+            margin-bottom: 12px;
             font-size: 14px;
         }
         .elements-list li:last-child {
-            margin-bottom: 0; /* No margin for the last item */
+            margin-bottom: 0;
         }
 
         .element-label-row {
             display: flex;
-            justify-content: space-between; /* Space between label and percentage */
-            width: 100%; /* Span full width of the list item */
-            margin-bottom: 4px; /* Space between label/percentage and bar */
+            justify-content: space-between;
+            width: 100%;
+            margin-bottom: 4px;
         }
 
         .element-label {
-            font-weight: normal; /* Labels not bold */
+            font-weight: normal;
             color: #555;
         }
 
         .element-percentage {
             font-weight: bold;
-            color: #333; /* Darker color for percentage */
-            min-width: 40px; /* Ensure space for percentage */
+            color: #333;
+            min-width: 40px;
             text-align: right;
         }
 
@@ -138,23 +140,33 @@
 
         .progress-bar-fill {
             height: 100%;
-            width: 0%; /* Initial width, will be set by JS */
-            border-radius: 4px; /* Rounded corners for the fill */
-            transition: width 0.5s ease-in-out; /* Smooth transition for width changes */
+            width: 0%;
+            border-radius: 4px;
+            transition: width 0.5s ease-in-out;
         }
 
         .top-section {
             display: flex;
-            flex-direction: column; /* Stack elements list and chart vertically on mobile */
-            align-items: flex-start;
+            flex-direction: column; /* Mobile: stack vertically */
+            align-items: flex-start; /* Default for mobile, doesn't stretch */
             gap: 8px;
-            width: 100%; /* Ensure it takes full width */
+            width: 100%;
         }
+
+        /* Order for mobile layout: elements-list first, then realtimeChart */
+        .top-section .elements-list {
+            order: 1;
+        }
+
+        .top-section .chart-card {
+            order: 2;
+        }
+
 
         /* --- Desktop Layout (min-width: 768px) --- */
         @media (min-width: 768px) {
             body {
-                align-items: center; /* Center vertically on desktop */
+                align-items: center;
             }
 
             .charts-container {
@@ -162,17 +174,18 @@
                 min-height: 80vh;
             }
 
-            /* Desktop heights for canvases */
+            /* Desktop heights for canvases - REMOVED fixed height for realtimeChart */
             #realtimeChart {
-                height: 55vh; /* Taller on desktop */
+                width: 100%; /* Keep 100% width of its parent */
+                height: 100%; /* Make canvas fill its parent card's height */
             }
             #staticChartLeft,
             #staticChartRight {
-                height: 35vh; /* Consistent height on desktop */
+                height: 39vh; /* Consistent height for bottom charts */
             }
 
             .bottom-charts-wrapper {
-                flex-direction: row; /* Arrange the two bottom charts horizontally on desktop */
+                flex-direction: row;
                 flex-grow: 1;
                 align-items: stretch;
             }
@@ -182,25 +195,39 @@
             }
 
             .top-section {
-                flex-direction: row; /* Arrange elements list and chart horizontally on desktop */
-                align-items: flex-start; /* Align items to the top */
+                flex-direction: row; /* Desktop: side-by-side */
+                align-items: stretch; /* KEY CHANGE: Make children stretch to match tallest */
+                height: 55vh; /* NEW: Define a fixed height for the parent top-section */
             }
 
-            .elements-list {
-                width: 250px; /* Fixed width for elements list on desktop */
-                /* Or you can use a percentage: width: 25%; */
-                
+            /* Reset order for desktop */
+            .top-section .elements-list {
+                order: 0;
+                /* REMOVED explicit height: 55vh; let flexbox handle it */
             }
 
             .top-section .chart-card {
-                flex-grow: 1; /* Realtime chart takes up remaining space */
+                order: 0;
+                flex-grow: 1;
+                /* REMOVED explicit height for the card, let flexbox handle it */
+            }
+
+            .elements-list {
+                width: 300px;
+                /* REMOVED explicit height: 55vh; let flexbox handle it */
+                flex-shrink: 0; /* Prevent shrinking on desktop */
+                flex-basis: 300px; /* Equivalent to width for flex items */
+            }
+
+            .chart-card {
+                width: auto; /* Let flexbox control width */
+                flex-grow: 1; /* Allow realtime chart card to grow */
             }
         }
     </style>
 </head>
 <body>
     <div class="charts-container">
-        <!-- The top-section now correctly uses flexbox to arrange its children -->
         <div class="top-section">
             <div class="elements-list">
                 <h4>Reefing Memory</h4>
