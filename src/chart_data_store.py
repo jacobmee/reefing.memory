@@ -1,3 +1,4 @@
+import logging
 import numpy as np
 import json
 import os
@@ -15,9 +16,12 @@ class ChartDataStore:
             return {"labels": [], "values": []}
         with open(self.filename, 'r') as f:
             data = json.load(f)
-        # 限制最多返回24行（最新的）
+        # 限制最多返回25行（最后的）
         if isinstance(data, list):
-            data = sorted(data, key=lambda d: d.get('time', ''), reverse=True)[:24]
+            data = sorted(data, key=lambda d: d.get('time', ''))
+            data = data[-20:]  # 取最后25行，顺序为从旧到新
+
+        logging.info("Loaded static  data:", data)
         return data
 
     def save_static_data(self, data):

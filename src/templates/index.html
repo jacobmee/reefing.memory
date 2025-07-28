@@ -651,13 +651,19 @@
             } else { // Assume it's "Mon DD"
                 d = new Date(dateStr + ', ' + new Date().getFullYear()); // Add current year for parsing
             }
-            
+
+            // Find Monday (week start)
             const dayOfWeek = d.getDay(); // 0 for Sunday, 1 for Monday, ..., 6 for Saturday
-            const diff = d.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // Adjust to Monday of the current week (or previous if Sunday)
-            const monday = new Date(d.setDate(diff));
-            
-            // Format to "Mon DD" for labels
-            return monday.toLocaleDateString(navigator.language, { month: 'short', day: 'numeric' });
+            const diffToMonday = d.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+            const monday = new Date(d);
+            monday.setDate(diffToMonday);
+
+            // Find Sunday (week end) for label: Monday + 6 days
+            const sunday = new Date(monday);
+            sunday.setDate(monday.getDate() + 6);
+
+            // Format to "Mon DD" for labels (will show Sunday date)
+            return sunday.toLocaleDateString(navigator.language, { month: 'short', day: 'numeric' });
         }
 
         // Group all entries by week
@@ -686,10 +692,10 @@
             return dateA - dateB;
         });
 
-        const elementKeys = ['N', 'P']; // Left Chart Elements
-        const elementData = {};  
-        elementKeys.forEach(key => {
-            elementData[key] = labels.map(week => {
+        const elementKeysLeft = ['N', 'P']; // Left Chart Elements
+        const elementDataLeft = {};  
+        elementKeysLeft.forEach(key => {
+            elementDataLeft[key] = labels.map(week => {
                 const arr = weekMap[week][key];
                 return arr ? avg(arr) : null;
             });
@@ -708,9 +714,9 @@
         function getAxisLeftChart(key) {
             return key === 'N' ? 'yLeft' : 'yRight';
         }
-        const datasetsLeft = elementKeys.map((key, idx) => ({
+        const datasetsLeft = elementKeysLeft.map((key, idx) => ({
             label: key === 'N' ? 'Nitrate' : 'Phosphate', // Assuming only N and P here
-            data: elementData[key],
+            data: elementDataLeft[key],
             borderColor: COLORS[key.toLowerCase()], // Use predefined colors
             backgroundColor: COLORS[key.toLowerCase()].replace('1)', '0.2)'),
             fill: true,
@@ -800,8 +806,8 @@
                         type: 'linear',
                         position: 'left',
                         beginAtZero: true,
-                        suggestedMax: elementData['N'].filter(v => v !== null).length > 0 ? 
-                                      1.3 * Math.max(...elementData['N'].filter(v => v !== null)) : 10,
+                        suggestedMax: elementDataLeft['N'].filter(v => v !== null).length > 0 ? 
+                                      1.3 * Math.max(...elementDataLeft['N'].filter(v => v !== null)) : 10,
                         ticks: { font: { family: 'Oswald', size: 14 } },
                         grid: { color: 'rgba(180,180,180,0.12)' }
                     },
@@ -809,8 +815,8 @@
                         type: 'linear',
                         position: 'right',
                         beginAtZero: true,
-                        suggestedMax: elementData['P'].filter(v => v !== null).length > 0 ? 
-                                      1.1 * Math.max(...elementData['P'].filter(v => v !== null)) : 0.2,
+                        suggestedMax: elementDataLeft['P'].filter(v => v !== null).length > 0 ? 
+                                      1.1 * Math.max(...elementDataLeft['P'].filter(v => v !== null)) : 0.2,
                         ticks: { font: { family: 'Oswald', size: 14 } },
                         grid: { drawOnChartArea: false }
                     }
@@ -954,7 +960,7 @@
         }
         // Helper to get latest value from realtimeData for a key
         function getLatestRealtimeValue(key) {
-            for (let i = realtimeData.length - 1; i >= 0; i--) {
+            for (let i = 0; i < realtimeData.length; i++) {
                 const v = realtimeData[i][key];
                 if (v !== undefined && v !== null) return v;
             }
@@ -995,8 +1001,8 @@
 
         function updateElementsList() {
             // Get the latest data for PH, ORP, Temp from realtimeData
-            const latestRealtimeData = realtimeData.length > 0 ? realtimeData[realtimeData.length - 1] : null;
-            
+            const latestRealtimeData = realtimeData.length > 0 ? realtimeData[0] : null;
+
             // Get the latest averaged data for N, P, CA, MG, KH from chart_data (weekly average)
             // This is a simplification; ideally, you'd have a separate "latest" data source for these.
             // For now, we'll use the last week's average from chart_data.
