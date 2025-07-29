@@ -408,19 +408,20 @@
                 let date = new Date(now);
                 date.setDate(now.getDate() - d); // Set to the target day
                 
-                for (let h = 0; h < 24; h++) {
-                    for (let m = 0; m < 60; m += 30) {
-                        let dt = new Date(date); // Create new Date object for each time point
-                        dt.setHours(h, m, 0, 0); // Set hour, minute, second, millisecond
+                // Every 4 hours
+                for (let h = 0; h < 24; h = h + 4) {
+                    
+                    let dt = new Date(date); // Create new Date object for each time point
+                    dt.setHours(h, 0, 0, 0); // Set hour, minute, second, millisecond
 
-                        // Only add if the generated time is not in the future
-                        if (dt <= now) {
-                            result.push(dt);
-                        } else {
-                            // If we've passed the current time, no need to generate further points for this day
-                            break; 
-                        }
+                    // Only add if the generated time is not in the future
+                    if (dt <= now) {
+                        result.push(dt);
+                    } else {
+                        // If we've passed the current time, no need to generate further points for this day
+                        break; 
                     }
+                    
                 }
             }
             return result;
@@ -429,8 +430,14 @@
         const isMobile = window.matchMedia('(max-width: 768px)').matches;
         const hourObjs = isMobile ? getRecentHalfHours(5) : getRecentHalfHours(7); // Adjusted for mobile devices
         
-        // Formats labels for X-axis (e.g., "Jul 28 09:30")
-        const dateLabels = hourObjs.map(dt => dt.toLocaleString(navigator.language, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }));
+        // Formats labels for X-axis as 'Jul 28, 09' (24-hour)
+        function formatDateLabel(dt) {
+            const month = dt.toLocaleString(navigator.language, { month: 'short' });
+            const day = dt.getDate().toString().padStart(2, '0');
+            const hour = dt.getHours().toString().padStart(2, '0');
+            return `${month} ${day}, ${hour}`;
+        }
+        const dateLabels = hourObjs.map(formatDateLabel);
 
         // findValueForHour function (already corrected in previous turn)
         function findValueForHour(dt, key) {
@@ -536,34 +543,23 @@
                             },
                             autoSkip: false, // We control skipping manually
                             callback: function(value, index, ticks) {
-                                // Get the full label string (e.g., "Jul 28 12:00 AM")
+                                // Get the full label string (e.g., "Jul 27, 04:00 AM")
                                 const fullLabel = this.getLabelForValue(value);
-                                // Extract just the date part (e.g., "Jul 28")
-                                const datePart = fullLabel.split(' ')[0] + ' ' + fullLabel.split(' ')[1];
-                                
+
+                                const datePart = fullLabel.split(',')[0];
+                                // console.log("datePart: " + datePart);
                                 // Only display label if it's 12 AM (midnight) for a new day
-                                // and if the date part hasn't been displayed before
-                                if (fullLabel.includes('12 AM') && datePart !== lastLabel) {
-                                    lastLabel = datePart; // Update last displayed date
+                                if (fullLabel.includes('00')) {
                                     return datePart;
                                 } 
                                 return ''; // Hide other labels
                             }
                         },
                         grid: {
-                            lineWidth: function(context) {
-                                // Draw a grid line only at the start of a new day (every 48 half-hour points)
-                                // hourObjs are 0-indexed, so 0, 48, 96 etc will be 12 AM of each day.
-                                const dt = hourObjs[context.index];
-                                if (dt && dt.getHours() === 0 && dt.getMinutes() === 0) {
-                                     return 1;
-                                }
-                                return 0;
-                            },
-                            color: 'rgba(180,180,180,0.12)',
                             drawTicks: false,
                             drawOnChartArea: true,
-                            drawBorder: true
+                            drawBorder: true,
+                            color: 'rgba(180,180,180,0.12)'
                         }
                     },
                     yLeft: {
@@ -645,21 +641,6 @@
 
                                 if (value !== null) {
                                     switch (key) {
-                                        case 'Nitrate': // N
-                                            formattedValue = value.toFixed(1);
-                                            break;
-                                        case 'Phosphate': // P
-                                            formattedValue = value.toFixed(2);
-                                            break;
-                                        case 'Calcium': // CA
-                                            formattedValue = value.toFixed(0);
-                                            break;
-                                        case 'Magnesium': // MG
-                                            formattedValue = value.toFixed(0);
-                                            break;
-                                        case 'Alk': // KH
-                                            formattedValue = value.toFixed(1);
-                                            break;
                                         case 'ORP':
                                             formattedValue = value.toFixed(0);
                                             break;
@@ -667,7 +648,7 @@
                                             formattedValue = value.toFixed(1);
                                             break;
                                         default:
-                                            formattedValue = value.toString();
+                                            formattedValue = value.toFixed(0);
                                     }
                                 }
 
@@ -961,12 +942,6 @@
 
                                 if (value !== null) {
                                     switch (key) {
-                                        case 'Nitrate': // N
-                                            formattedValue = value.toFixed(1);
-                                            break;
-                                        case 'Phosphate': // P
-                                            formattedValue = value.toFixed(2);
-                                            break;
                                         case 'Calcium': // CA
                                             formattedValue = value.toFixed(0);
                                             break;
