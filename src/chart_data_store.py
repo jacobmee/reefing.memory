@@ -25,8 +25,27 @@ class ChartDataStore:
         return data
 
     def save_static_data(self, data):
+        # Load existing data
+        if os.path.exists(self.filename):
+            with open(self.filename, 'r') as f:
+                try:
+                    all_data = json.load(f)
+                except Exception:
+                    all_data = []
+        else:
+            all_data = []
+        # 查找是否有同日期记录
+        found = False
+        for idx, entry in enumerate(all_data):
+            if entry.get('date') == data.get('date'):
+                all_data[idx] = data
+                found = True
+                break
+        if not found:
+            all_data.append(data)
+        # Save back
         with open(self.filename, 'w') as f:
-            json.dump(data, f)
+            json.dump(all_data, f, indent=2)
 
     def load_realtime_data(self, url='http://reef.lan:6001/data'):
         try:

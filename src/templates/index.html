@@ -8,6 +8,10 @@
     <link href="https://fonts.googleapis.com/css?family=Roboto:300,700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css?family=Lato:300,700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Auto-refresh page every hour (3600000 ms)
+        setTimeout(function() { window.location.reload(); }, 3600000);
+    </script>
     <style>
         /* Base styles for all screen sizes (Mobile-First Approach) */
         body {
@@ -68,24 +72,23 @@
         /* New styles for the elements list section */
         .elements-list {
             background: #fff;
-            padding: 20px;
-            padding-top: 15px;
+            padding: 25px;
+            padding-top: 10px;
             border-radius: 4px;
             box-shadow: 0 4px 16px rgba(0,0,0,0.08);
             font-family: 'Oswald', sans-serif;
-            font-size: 14px;
+            font-size: 13px;
             flex-shrink: 0;
             width: 100%;
             box-sizing: border-box;
             /* --- START MOBILE HEIGHT ADJUSTMENT --- */
             min-height: 30vh; /* 设定一个最小高度，使其在手机上更高一些 */
             overflow-y: auto; /* 如果内容溢出，允许垂直滚动 */
-            /* --- END MOBILE HEIGHT ADJUSTMENT --- */
         }
         .elements-list h4 {
-            margin: 0 0 15px 0;
+            margin: 10px 0 24px 0;
             font-family: 'Lato', sans-serif;
-            font-size: 26px;
+            font-size: 23px;
             text-align: center;
             color: #333;
         }
@@ -136,7 +139,7 @@
 
         .progress-bar-container {
             width: 100%;
-            height: 8px;
+            height: 6px;
             background-color: #e0e0e0;
             border-radius: 4px;
             overflow: hidden;
@@ -156,7 +159,7 @@
         .progress-bar-fill {
             height: 100%;
             width: 0%;
-            border-radius: 4px;
+            border-radius: 2px;
             transition: width 0.5s ease-in-out;
         }
 
@@ -238,7 +241,7 @@
             }
             .elements-list li {
                 width: 100%;
-                margin-bottom: 12px;
+                margin-bottom: 9px;
             }
             .elements-list li:last-child {
                 margin-bottom: 0;
@@ -256,7 +259,35 @@
     <div class="charts-container">
         <div class="top-section">
             <div class="elements-list">
-                <h4>Reefing Memory</h4>
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px;">
+                    <h4 style="margin:0;">Reefing Memory</h4>
+                    <button id="addEntryBtn" title="Add new entry" style="background: none; border: none; cursor: pointer; margin-left: 8px; color: #3b82f6; display: flex; align-items: center; justify-content: center; height: 1.6em; width: 1.6em; padding: 0;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                    </button>
+                </div>
+        <!-- Modal for adding new entry -->
+        <div id="addEntryModal" style="display:none; position:fixed; z-index:1000; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.25); justify-content:center; align-items:center;">
+            <div style="background:#fff; border-radius:8px; box-shadow:0 8px 32px rgba(0,0,0,0.18); padding:12px 24px 24px 24px; min-width:320px; max-width:95vw; position:relative;">
+                <button id="closeAddEntryModal" style="position:absolute; top:12px; right:12px; background:none; border:none; font-size:1.5em; color:#888; cursor:pointer;">&times;</button>
+                <h4>Element Entry</h4>
+                <form id="addEntryForm" style="display:flex; flex-direction:column; gap:16px;">
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 8px;">
+                        <button id="prevEntryBtn" type="button" title="Previous" style="background: none; border: none; cursor: pointer; color: #3b82f6; display: flex; align-items: center; justify-content: center; height: 1.6em; width: 1.6em; padding: 0;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><polyline points="15 18 9 12 15 6"/></svg>
+                        </button>
+                        <label for="entryDate" style="font-family:'Oswald',sans-serif; margin:0 4px 0 0;">Date:</label>
+                        <input id="entryDate" name="date" type="date" required style="font-size:1em; padding:2px 8px; border-radius:4px; border:1px solid #ccc; font-family:'Oswald',sans-serif; min-width:120px; text-align:center;"/>
+                        <button id="nextEntryBtn" type="button" title="Next" style="background: none; border: none; cursor: pointer; color: #3b82f6; display: flex; align-items: center; justify-content: center; height: 1.6em; width: 1.6em; padding: 0;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><polyline points="9 18 15 12 9 6"/></svg>
+                        </button>
+                    </div>
+                    <ul id="modalElementList" style="list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:10px;">
+                        <!-- JS will populate -->
+                    </ul>
+                    <button type="submit" style="margin-top:12px; background:#3b82f6; color:#fff; border:none; border-radius:4px; font-size:1.1em; padding:8px 0; cursor:pointer;">Save</button>
+                </form>
+            </div>
+        </div>
                 <ul>
                     <li id="orpElement">
                         <div class="element-label-row">
@@ -356,10 +387,324 @@
         </div>
     </div>
     <script>
+        // --- Modal logic for adding new entry ---
+        // 格式化 'Mon DD' 为 YYYY-MM-DD
+        function formatDateYYYYMMDD(dateStr) {
+            const d = new Date(dateStr + ', ' + new Date().getFullYear());
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            return `${yyyy}-${mm}-${dd}`;
+        }
+        const addEntryBtn = document.getElementById('addEntryBtn');
+        const addEntryModal = document.getElementById('addEntryModal');
+        const closeAddEntryModal = document.getElementById('closeAddEntryModal');
+        const addEntryForm = document.getElementById('addEntryForm');
+        const modalElementList = document.getElementById('modalElementList');
+        const entryDateInput = document.getElementById('entryDate');
+
+        // Element keys and display names for modal
+        const modalElements = [
+            { key: 'N', label: 'Nitrate', min: 0, max: 20, decimals: 1 },
+            { key: 'P', label: 'Phosphate', min: 0, max: 0.2, decimals: 2 },
+            { key: 'CA', label: 'Calcium', min: 300, max: 500, decimals: 0 },
+            { key: 'MG', label: 'Magnesium', min: 1000, max: 1600, decimals: 0 },
+            { key: 'KH', label: 'Alkalinity', min: 4, max: 10, decimals: 1 }
+        ];
+
+        // --- Modal navigation state ---
+        let modalEntryIndex = null; // null means latest
+
+        // Drag and drop helpers
+        let dragSrcEl = null;
+        function handleDragStart(e) {
+            dragSrcEl = this;
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', this.outerHTML);
+            this.classList.add('dragElem');
+        }
+        function handleDragOver(e) {
+            if (e.preventDefault) e.preventDefault();
+            this.classList.add('over');
+            return false;
+        }
+        function handleDragLeave(e) {
+            this.classList.remove('over');
+        }
+        function handleDrop(e) {
+            if (e.stopPropagation) e.stopPropagation();
+            if (dragSrcEl !== this) {
+                this.parentNode.removeChild(dragSrcEl);
+                const dropHTML = e.dataTransfer.getData('text/html');
+                this.insertAdjacentHTML('beforebegin', dropHTML);
+                const dropElem = this.previousSibling;
+                addDnDHandlers(dropElem);
+            }
+            this.classList.remove('over');
+            return false;
+        }
+        function handleDragEnd(e) {
+            this.classList.remove('over');
+            this.classList.remove('dragElem');
+        }
+        function addDnDHandlers(elem) {
+            elem.addEventListener('dragstart', handleDragStart, false);
+            elem.addEventListener('dragover', handleDragOver, false);
+            elem.addEventListener('dragleave', handleDragLeave, false);
+            elem.addEventListener('drop', handleDrop, false);
+            elem.addEventListener('dragend', handleDragEnd, false);
+        }
+
+        function renderModalEntry(entry) {
+            // entry: object with keys N, P, CA, MG, KH, date
+            modalElementList.innerHTML = '';
+            modalElements.forEach((el, idx) => {
+                const li = document.createElement('li');
+                li.setAttribute('draggable', 'true');
+                li.style.display = 'flex';
+                li.style.flexDirection = 'column';
+                li.style.alignItems = 'flex-start';
+                li.style.background = '#f3f1f1';
+                li.style.borderRadius = '4px';
+                li.style.padding = '8px 10px 10px 10px';
+                li.style.marginBottom = '0';
+                // Label row
+                const labelRow = document.createElement('div');
+                labelRow.style.display = 'flex';
+                labelRow.style.justifyContent = 'space-between';
+                labelRow.style.width = '100%';
+                labelRow.style.marginBottom = '4px';
+                const label = document.createElement('span');
+                label.textContent = el.label + ': ';
+                label.style.fontFamily = 'Oswald, sans-serif';
+                label.style.color = '#555';
+                const valueSpan = document.createElement('span');
+                valueSpan.className = 'modal-element-value';
+                valueSpan.style.fontWeight = 'bold';
+                valueSpan.style.color = '#333';
+                valueSpan.style.minWidth = '40px';
+                valueSpan.style.textAlign = 'right';
+                // Set value from entry, fallback to min
+                let value = (entry && entry[el.key] != null) ? Number(entry[el.key]) : el.min;
+                valueSpan.textContent = value.toFixed(el.decimals);
+                labelRow.appendChild(label);
+                labelRow.appendChild(valueSpan);
+                // Progress bar
+                const barContainer = document.createElement('div');
+                barContainer.className = 'modal-progress-bar-container';
+                barContainer.style.width = '100%';
+                barContainer.style.height = '8px';
+                barContainer.style.background = '#e0e0e0';
+                barContainer.style.borderRadius = '4px';
+                barContainer.style.position = 'relative';
+                barContainer.style.overflow = 'hidden';
+                barContainer.style.userSelect = 'none';
+                barContainer.style.touchAction = 'none';
+                // Threshold marker
+                const threshold = document.createElement('div');
+                threshold.className = 'progress-bar-threshold';
+                threshold.style.position = 'absolute';
+                threshold.style.left = '50%';
+                threshold.style.top = '0';
+                threshold.style.width = '2px';
+                threshold.style.height = '100%';
+                threshold.style.background = '#888';
+                threshold.style.opacity = '0.5';
+                threshold.style.zIndex = '2';
+                barContainer.appendChild(threshold);
+                // Fill
+                const fill = document.createElement('div');
+                fill.className = 'modal-progress-bar-fill';
+                fill.style.height = '100%';
+                fill.style.width = ((value - el.min) / (el.max - el.min) * 100) + '%';
+                fill.style.borderRadius = '4px';
+                fill.style.background = COLORS[el.key.toLowerCase()];
+                fill.style.transition = 'width 0.2s';
+                barContainer.appendChild(fill);
+                // Drag/Click interaction
+                function setValueFromBar(e) {
+                    if (e.preventDefault) e.preventDefault();
+                    const rect = barContainer.getBoundingClientRect();
+                    const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+                    let percent = Math.max(0, Math.min(1, x / rect.width));
+                    value = el.min + percent * (el.max - el.min);
+                    // Snap to step
+                    const step = Math.pow(10, -el.decimals);
+                    value = Math.round(value / step) * step;
+                    value = Math.max(el.min, Math.min(el.max, value));
+                    valueSpan.textContent = value.toFixed(el.decimals);
+                    fill.style.width = ((value - el.min) / (el.max - el.min) * 100) + '%';
+                }
+                barContainer.addEventListener('mousedown', function(e) {
+                    setValueFromBar(e);
+                    function moveHandler(ev) { setValueFromBar(ev); }
+                    function upHandler() {
+                        document.removeEventListener('mousemove', moveHandler);
+                        document.removeEventListener('mouseup', upHandler);
+                    }
+                    document.addEventListener('mousemove', moveHandler);
+                    document.addEventListener('mouseup', upHandler);
+                });
+                barContainer.addEventListener('touchstart', function(e) {
+                    setValueFromBar(e);
+                    function moveHandler(ev) { setValueFromBar(ev); }
+                    function upHandler() {
+                        document.removeEventListener('touchmove', moveHandler);
+                        document.removeEventListener('touchend', upHandler);
+                    }
+                    document.addEventListener('touchmove', moveHandler);
+                    document.addEventListener('touchend', upHandler);
+                });
+                // Store value on li for submit
+                li.dataset.key = el.key;
+                li.dataset.value = value;
+                // Update value on change
+                function updateValueOnBar() {
+                    li.dataset.value = value;
+                }
+                barContainer.addEventListener('mouseup', updateValueOnBar);
+                barContainer.addEventListener('touchend', updateValueOnBar);
+                // Compose
+                li.appendChild(labelRow);
+                li.appendChild(barContainer);
+                addDnDHandlers(li);
+                modalElementList.appendChild(li);
+            });
+        }
+
+        function openAddEntryModal() {
+        // Always reset to 'add new' mode
+        modalEntryIndex = null;
+        const chartData = window.chart_data || [];
+        // 默认数据：可选，使用最新一条数据作为初始值，否则用默认值
+        let entry = null;
+        if (chartData.length > 0) {
+            entry = chartData[chartData.length - 1];
+        }
+        // 日期始终为今天
+        const today = new Date();
+        entryDateInput.value = today.toISOString().slice(0,10);
+        renderModalEntry(entry);
+        updateModalNavButtons();
+        addEntryModal.style.display = 'flex';
+        }
+
+        function updateModalNavButtons() {
+            const chartData = window.chart_data || [];
+            const prevBtn = document.getElementById('prevEntryBtn');
+            const nextBtn = document.getElementById('nextEntryBtn');
+            // Always keep buttons in layout, just hide visually
+            if (!chartData.length || chartData.length === 1) {
+                prevBtn.style.visibility = 'hidden';
+                nextBtn.style.visibility = 'hidden';
+                return;
+            }
+            if (modalEntryIndex === null || modalEntryIndex === chartData.length - 1) {
+                prevBtn.style.visibility = chartData.length > 1 ? 'visible' : 'hidden';
+                nextBtn.style.visibility = 'hidden';
+            } else if (modalEntryIndex === 0) {
+                prevBtn.style.visibility = 'hidden';
+                nextBtn.style.visibility = 'visible';
+            } else {
+                prevBtn.style.visibility = 'visible';
+                nextBtn.style.visibility = 'visible';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const prevBtn = document.getElementById('prevEntryBtn');
+            const nextBtn = document.getElementById('nextEntryBtn');
+            prevBtn.addEventListener('click', function() {
+                const chartData = window.chart_data || [];
+                if (chartData.length < 2) return;
+                if (modalEntryIndex === null) {
+                    // Go to previous (second last)
+                    modalEntryIndex = chartData.length - 2;
+                } else if (modalEntryIndex > 0) {
+                    modalEntryIndex--;
+                }
+                const entry = chartData[modalEntryIndex];
+                // Set date input
+                if (entry && entry.date) {
+                    entryDateInput.value = formatDateYYYYMMDD(entry.date);
+                }
+                renderModalEntry(entry);
+                updateModalNavButtons();
+            });
+            nextBtn.addEventListener('click', function() {
+                const chartData = window.chart_data || [];
+                if (chartData.length < 2) return;
+                if (modalEntryIndex === null) return; // Already at latest
+                if (modalEntryIndex < chartData.length - 1) {
+                    modalEntryIndex++;
+                }
+                // If now at latest, set to null
+                if (modalEntryIndex === chartData.length - 1) {
+                    modalEntryIndex = null;
+                    const entry = chartData[chartData.length - 1];
+                    if (entry && entry.date) {
+                        entryDateInput.value = formatDateYYYYMMDD(entry.date);
+                    }
+                    renderModalEntry(entry);
+                } else {
+                    const entry = chartData[modalEntryIndex];
+                    if (entry && entry.date) {
+                        entryDateInput.value = formatDateYYYYMMDD(entry.date);
+                    }
+                    renderModalEntry(entry);
+                }
+                updateModalNavButtons();
+            });
+        });
+        function closeAddEntry() {
+            addEntryModal.style.display = 'none';
+        }
+        addEntryBtn.addEventListener('click', openAddEntryModal);
+        closeAddEntryModal.addEventListener('click', closeAddEntry);
+        addEntryModal.addEventListener('click', function(e) {
+            if (e.target === addEntryModal) closeAddEntry();
+        });
+
+        // Handle form submit
+        addEntryForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            // Get date in 'Mon DD' format
+            const dateVal = entryDateInput.value;
+            const dateObj = new Date(dateVal);
+            const month = dateObj.toLocaleString('en-US', { month: 'short' });
+            const day = dateObj.getDate();
+            const dateStr = `${month} ${day}`;
+            // Get values in current order
+            const values = {};
+            Array.from(modalElementList.children).forEach(li => {
+                const key = li.dataset.key;
+                const value = parseFloat(li.querySelector('.modal-element-value').textContent);
+                values[key] = value;
+            });
+            // Compose data
+            const data = { date: dateStr, ...values };
+            // Send to backend
+            fetch('/add_static_data', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(resp => resp.json())
+            .then(resp => {
+                if (resp.success) {
+                    closeAddEntry();
+                    window.location.reload();
+                } else {
+                    alert('Failed to save: ' + (resp.error || 'Unknown error'));
+                }
+            })
+            .catch(() => alert('Failed to save.'));
+        });
         // Placeholder for your Jinja2 variables.
         // In a real Flask/Jinja2 app, these would be populated server-side.
         const realtimeData = {{ realtime_data|tojson }} || [];
         const chart_data = {{ chart_data|tojson }} || [];
+        window.chart_data = chart_data;
 
         // Check if realtimeData is empty and hide the chart if true
         if (!realtimeData || realtimeData.length === 0) {
@@ -409,7 +754,7 @@
                 date.setDate(now.getDate() - d); // Set to the target day
                 
                 // Every 4 hours
-                for (let h = 0; h < 24; h = h + 4) {
+                for (let h = 0; h < 24; h = h + 2) {
                     
                     let dt = new Date(date); // Create new Date object for each time point
                     dt.setHours(h, 0, 0, 0); // Set hour, minute, second, millisecond
@@ -449,10 +794,9 @@
             const month = (dt.getMonth() + 1).toString().padStart(2, '0'); // getMonth() is 0-indexed
             const day = dt.getDate().toString().padStart(2, '0');
             const hours = dt.getHours().toString().padStart(2, '0');
-            const minutes = dt.getMinutes().toString().padStart(2, '0'); 
 
             // This creates the exact format 'YYYY-MM-DD HH:MM' using local time values
-            const ymdhm = `${year}-${month}-${day} ${hours}:${minutes}`;
+            const ymdhm = `${year}-${month}-${day} ${hours}`;
 
             for (let i = 0; i < realtimeData.length; i++) {
                 const t = realtimeData[i].time;
@@ -511,7 +855,7 @@
                         label: 'ORP',
                         data: orpHourValues,
                         borderColor: COLORS.orp,
-                        backgroundColor: COLORS.orp.replace('1)', '0.2)'),
+                        backgroundColor: COLORS.orp.replace('1)', '0.1)'),
                         fill: false, // Do not fill area for ORP
                         tension: 0.4,
                         borderWidth: 3,
@@ -520,18 +864,18 @@
                         yAxisID: 'yRight',
                         spanGaps: true, // Connect null points
                         segment: {
-                            borderColor: ctx => skipped(ctx, 'rgb(0,0,0,0.2)'),
+                            borderColor: ctx => skipped(ctx, 'rgb(0,0,0,0.1)'),
                             borderDash: ctx => skipped(ctx, [6, 6]),
                         }
                     }
                 ]
-            },
+            },   
             options: {
                 responsive: true,
                 maintainAspectRatio: false, // Allow CSS to control height
                 interaction: {
-                    mode: 'index',
-                    axis: 'x',
+                    mode: 'nearest',
+                    axis: 'xy',
                     intersect: false
                 },
                 scales: {
@@ -559,7 +903,7 @@
                             drawTicks: false,
                             drawOnChartArea: true,
                             drawBorder: true,
-                            color: 'rgba(180,180,180,0.12)'
+                            color: 'rgba(180,180,180,0.1)'
                         }
                     },
                     yLeft: {
@@ -613,8 +957,8 @@
                     },
                     tooltip: {
                         enabled: true,
-                        mode: 'index',
-                        intersect: false,
+                        mode: 'nearest',
+                        intersect: true,
                         bodyFont: { family: 'Oswald', size: 14 },
                         callbacks: {
                             title: function(context) {
@@ -855,12 +1199,12 @@
                         grid: { drawOnChartArea: false }
                     }
                 },
-                interaction: { mode: 'nearest', axis: 'x', intersect: false },
+                interaction: { mode: 'nearest', axis: 'xy', intersect: false },
                 plugins: {
                     title: { display: false, text: 'Nutrition', font: { family: 'Oswald', size: 14 }, align: 'start' },
                     legend: { display: true, position: 'top'},
                     tooltip: {
-                        enabled: true, mode: 'index', intersect: false, bodyFont: { family: 'Oswald', size: 14 },
+                        enabled: true, mode: 'nearest', intersect: true, bodyFont: { family: 'Oswald', size: 14 },
                         callbacks: {
                             label: function(context) {
                                 const key = context.dataset.label === 'Nitrate' ? 'N' : 'P';
@@ -926,12 +1270,16 @@
                         grid: { drawOnChartArea: false }
                     }
                 },
-                interaction: { mode: 'nearest', axis: 'x', intersect: false },
+                interaction: { mode: 'nearest', axis: 'xy', intersect: false },
                 plugins: {
                     title: { display: false, text: 'Huge Elements', font: { family: 'Oswald', size: 14 }, align: 'top' },
                     legend: { display: true, position: 'top' },
                     tooltip: {
-                        enabled: true, mode: 'index', intersect: false, bodyFont: { family: 'Oswald', size: 14 },
+                        enabled: true, mode: 'nearest', intersect: true, bodyFont: { family: 'Oswald', size: 14 },
+                        filter: function(tooltipItem, data) {
+                            // Only show tooltip for the line dataset (assuming it's datasetIndex 0)
+                            return tooltipItem.datasetIndex === 2; 
+                        },
                         callbacks: {
                             label: function(context) {
                                 // Map label to original key
