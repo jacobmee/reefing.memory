@@ -50,14 +50,16 @@
         }
 
         /* Heights for canvases on mobile (default) */
+        /* UPDATED: Increased the height of the real-time chart for better visibility. */
         #realtimeChart {
             width: 100%;
-            height: 30vh;
+            height: 28vh; /* This gives it a significant portion of the screen */
         }
+        
         #staticChartLeft,
         #staticChartRight {
             width: 100%;
-            height: 23vh;
+            height: 28vh;
         }
 
         /* Wrapper for the two bottom charts (default stacked on mobile) */
@@ -77,13 +79,13 @@
             border-radius: 4px;
             box-shadow: 0 4px 16px rgba(0,0,0,0.08);
             font-family: 'Oswald', sans-serif;
-            font-size: 13px;
+            font-size: 14px;
             flex-shrink: 0;
             width: 100%;
             box-sizing: border-box;
-            /* --- START MOBILE HEIGHT ADJUSTMENT --- */
-            min-height: 30vh; /* 设定一个最小高度，使其在手机上更高一些 */
-            overflow-y: auto; /* 如果内容溢出，允许垂直滚动 */
+            /* UPDATED: Reduced the minimum height on mobile to make it less long */
+            min-height: 23vh;
+            overflow-y: auto;
         }
         .elements-list h4 {
             margin: 10px 0 24px 0;
@@ -109,6 +111,21 @@
             flex-direction: column;
             align-items: flex-start;
             width: calc(50% - 16px);
+        }
+
+        /* Fix: In pop modal, force li width to 100% */
+        #addEntryModal .elements-list li,
+        #addEntryModal #modalElementList li {
+            width: 100% !important;
+            margin-bottom: 0;
+            box-sizing: border-box;
+        }
+
+        .elements-pop-list li {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            width: calc(50% - 16px);
             margin-bottom: 0;
             box-sizing: border-box;
         }
@@ -122,7 +139,7 @@
             display: flex;
             justify-content: space-between;
             width: 100%;
-            margin-bottom: 4px;
+            margin-bottom: 8px;
         }
 
         .element-label {
@@ -151,7 +168,7 @@
             top: 0;
             width: 2px;
             height: 100%;
-            background: #888;
+            background: #1d740c;
             opacity: 0.7;
             z-index: 2;
         }
@@ -166,18 +183,15 @@
         .top-section {
             display: flex;
             flex-direction: column; /* Mobile: stack vertically */
-            align-items: flex-start;
             gap: 8px;
             width: 100%;
         }
 
-        /* Order for mobile layout: elements-list first, then realtimeChart */
-        .top-section .elements-list {
-            order: 1;
-        }
-
-        .top-section .chart-card {
-            order: 2;
+        /* New container for the two static charts */
+        .static-charts-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
         }
 
 
@@ -192,13 +206,23 @@
                 min-height: 80vh;
             }
 
+            /* UPDATED: Adjusted height for a balanced look on desktop */
             #realtimeChart {
-                width: 100%;
-                height: 100%;
+                height: 48vh;
             }
+
             #staticChartLeft,
             #staticChartRight {
-                height: 36vh;
+                height: 100%;
+            }
+            
+            .static-charts-wrapper {
+                flex-direction: row;
+                flex-grow: 1;
+            }
+
+            .static-charts-wrapper > .chart-card {
+                flex: 1;
             }
 
             .bottom-charts-wrapper {
@@ -211,20 +235,11 @@
                 flex: 1;
             }
 
+            /* UPDATED: Adjusted height for a balanced look on desktop */
             .top-section {
                 flex-direction: row;
                 align-items: stretch;
-                height: 58vh;
-            }
-
-            /* Reset order for desktop */
-            .top-section .elements-list {
-                order: 0;
-            }
-
-            .top-section .chart-card {
-                order: 0;
-                flex-grow: 1;
+                height: 45vh;
             }
 
             .elements-list {
@@ -265,60 +280,28 @@
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
                     </button>
                 </div>
-        <!-- Modal for adding new entry -->
-        <div id="addEntryModal" style="display:none; position:fixed; z-index:1000; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.25); justify-content:center; align-items:center;">
-            <div style="background:#fff; border-radius:8px; box-shadow:0 8px 32px rgba(0,0,0,0.18); padding:12px 24px 24px 24px; min-width:320px; max-width:95vw; position:relative;">
-                <button id="closeAddEntryModal" style="position:absolute; top:12px; right:12px; background:none; border:none; font-size:1.5em; color:#888; cursor:pointer;">&times;</button>
-                <h4>Element Entry</h4>
-                <form id="addEntryForm" style="display:flex; flex-direction:column; gap:16px;">
-                    <div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 8px;">
-                        <button id="prevEntryBtn" type="button" title="Previous" style="background: none; border: none; cursor: pointer; color: #3b82f6; display: flex; align-items: center; justify-content: center; height: 1.6em; width: 1.6em; padding: 0;">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><polyline points="15 18 9 12 15 6"/></svg>
-                        </button>
-                        <label for="entryDate" style="font-family:'Oswald',sans-serif; margin:0 4px 0 0;">Date:</label>
-                        <input id="entryDate" name="date" type="date" required style="font-size:1em; padding:2px 8px; border-radius:4px; border:1px solid #ccc; font-family:'Oswald',sans-serif; min-width:120px; text-align:center;"/>
-                        <button id="nextEntryBtn" type="button" title="Next" style="background: none; border: none; cursor: pointer; color: #3b82f6; display: flex; align-items: center; justify-content: center; height: 1.6em; width: 1.6em; padding: 0;">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><polyline points="9 18 15 12 9 6"/></svg>
-                        </button>
+                <div id="addEntryModal" style="display:none; position:fixed; z-index:1000; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.25); justify-content:center; align-items:center;">
+                    <div style="background:#fff; border-radius:8px; box-shadow:0 8px 32px rgba(0,0,0,0.18); padding:12px 24px 24px 24px; min-width:320px; max-width:95vw; position:relative;">
+                        <button id="closeAddEntryModal" style="position:absolute; top:12px; right:12px; background:none; border:none; font-size:1.5em; color:#888; cursor:pointer;">&times;</button>
+                        <h4>Element Entry</h4>
+                        <form id="addEntryForm" style="display:flex; flex-direction:column; gap:16px;">
+                            <div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 8px;">
+                                <button id="prevEntryBtn" type="button" title="Previous" style="background: none; border: none; cursor: pointer; color: #3b82f6; display: flex; align-items: center; justify-content: center; height: 1.6em; width: 1.6em; padding: 0;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><polyline points="15 18 9 12 15 6"/></svg>
+                                </button>
+                                <label for="entryDate" style="font-family:'Oswald',sans-serif; margin:0 4px 0 0;">Date:</label>
+                                <input id="entryDate" name="date" type="date" required style="font-size:1em; padding:2px 8px; border-radius:4px; border:1px solid #ccc; font-family:'Oswald',sans-serif; min-width:120px; text-align:center;"/>
+                                <button id="nextEntryBtn" type="button" title="Next" style="background: none; border: none; cursor: pointer; color: #3b82f6; display: flex; align-items: center; justify-content: center; height: 1.6em; width: 1.6em; padding: 0;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><polyline points="9 18 15 12 9 6"/></svg>
+                                </button>
+                            </div>
+                            <ul id="modalElementList" style="list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:10px;">
+                                </ul>
+                            <button type="submit" style="margin-top:12px; background:#3b82f6; color:#fff; border:none; border-radius:4px; font-size:1.1em; padding:8px 32px; cursor:pointer; width:fit-content; align-self:center;">Save</button>
+                        </form>
                     </div>
-                    <ul id="modalElementList" style="list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:10px;">
-                        <!-- JS will populate -->
-                    </ul>
-                    <button type="submit" style="margin-top:12px; background:#3b82f6; color:#fff; border:none; border-radius:4px; font-size:1.1em; padding:8px 0; cursor:pointer;">Save</button>
-                </form>
-            </div>
-        </div>
+                </div>
                 <ul>
-                    <li id="orpElement">
-                        <div class="element-label-row">
-                            <span class="element-label">ORP: </span>
-                            <span class="element-percentage"></span>
-                        </div>
-                        <div class="progress-bar-container">
-                            <div class="progress-bar-threshold"></div>
-                            <div class="progress-bar-fill" data-element="orp"></div>
-                        </div>
-                    </li>
-                    <li id="phElement">
-                        <div class="element-label-row">
-                            <span class="element-label">PH: </span>
-                            <span class="element-percentage"></span>
-                        </div>
-                        <div class="progress-bar-container">
-                            <div class="progress-bar-threshold"></div>
-                            <div class="progress-bar-fill" data-element="ph"></div>
-                        </div>
-                    </li>
-                    <li id="tempElement">
-                        <div class="element-label-row">
-                            <span class="element-label">Temperature: </span>
-                            <span class="element-percentage"></span>
-                        </div>
-                        <div class="progress-bar-container">
-                            <div class="progress-bar-threshold"></div>
-                            <div class="progress-bar-fill" data-element="t"></div>
-                        </div>
-                    </li>
                     <li id="nElement">
                         <div class="element-label-row">
                             <span class="element-label">Nitrate: </span>
@@ -371,19 +354,21 @@
                     </li>
                 </ul>
             </div>
-
-            <div class="chart-card">
-                <canvas id="realtimeChart"></canvas>
+            <div class="static-charts-wrapper">
+                <div class="chart-card">
+                    <canvas id="staticChartLeft"></canvas>
+                </div>
+                <div class="chart-card">
+                    <canvas id="staticChartRight"></canvas>
+                </div>
             </div>
         </div>
 
-        <div class="bottom-charts-wrapper">
-            <div class="chart-card">
-                <canvas id="staticChartLeft"></canvas>
+        <div class="bottom-charts-wrapper" style="display: flex; flex-direction: row; gap: 24px; align-items: flex-start; width: 100%;">
+            <div class="chart-card" style="flex: 2 1 0;">
+                <canvas id="realtimeChart"></canvas>
             </div>
-            <div class="chart-card">
-                <canvas id="staticChartRight"></canvas>
-            </div>
+            
         </div>
     </div>
     <script>
@@ -404,12 +389,22 @@
         const entryDateInput = document.getElementById('entryDate');
 
         // Element keys and display names for modal
+        // 元素参数统一结构体
+        const ELEMENTS_CONFIG = {
+            N:    { label: 'Nitrate',    min: 0,    best: 5,   max: 20,   decimals: 1 },
+            P:    { label: 'Phosphate',  min: 0,    best: 0.06,max: 0.2,  decimals: 2 },
+            CA:   { label: 'Calcium',    min: 300,  best: 400, max: 500,  decimals: 0 },
+            MG:   { label: 'Magnesium',  min: 1000, best: 1320,max: 1600, decimals: 0 },
+            KH:   { label: 'Alkalinity', min: 4,    best: 8,   max: 14,   decimals: 1 }
+        };
+
+        // modalElements 用于弹窗渲染
         const modalElements = [
-            { key: 'N', label: 'Nitrate', min: 0, max: 20, decimals: 1 },
-            { key: 'P', label: 'Phosphate', min: 0, max: 0.2, decimals: 2 },
-            { key: 'CA', label: 'Calcium', min: 300, max: 500, decimals: 0 },
-            { key: 'MG', label: 'Magnesium', min: 1000, max: 1600, decimals: 0 },
-            { key: 'KH', label: 'Alkalinity', min: 4, max: 10, decimals: 1 }
+            { key: 'N', ...ELEMENTS_CONFIG.N },
+            { key: 'P', ...ELEMENTS_CONFIG.P },
+            { key: 'CA', ...ELEMENTS_CONFIG.CA },
+            { key: 'MG', ...ELEMENTS_CONFIG.MG },
+            { key: 'KH', ...ELEMENTS_CONFIG.KH }
         ];
 
         // --- Modal navigation state ---
@@ -456,7 +451,7 @@
         }
 
         function renderModalEntry(entry) {
-            // entry: object with keys N, P, CA, MG, KH, date
+            // entry: object with keyrenderModalEntrys N, P, CA, MG, KH, date
             modalElementList.innerHTML = '';
             modalElements.forEach((el, idx) => {
                 const li = document.createElement('li');
@@ -468,27 +463,38 @@
                 li.style.borderRadius = '4px';
                 li.style.padding = '8px 10px 10px 10px';
                 li.style.marginBottom = '0';
+
                 // Label row
                 const labelRow = document.createElement('div');
                 labelRow.style.display = 'flex';
                 labelRow.style.justifyContent = 'space-between';
+                labelRow.style.alignItems = 'center'; // Add this for vertical alignment
                 labelRow.style.width = '100%';
                 labelRow.style.marginBottom = '4px';
+
                 const label = document.createElement('span');
-                label.textContent = el.label + ': ';
+                let value = (entry && entry[el.key] != null) ? Number(entry[el.key]) : el.min;
+                label.textContent = el.label + ': ' + value.toFixed(el.decimals);
                 label.style.fontFamily = 'Oswald, sans-serif';
                 label.style.color = '#555';
-                const valueSpan = document.createElement('span');
-                valueSpan.className = 'modal-element-value';
-                valueSpan.style.fontWeight = 'bold';
-                valueSpan.style.color = '#333';
-                valueSpan.style.minWidth = '40px';
-                valueSpan.style.textAlign = 'right';
-                // Set value from entry, fallback to min
-                let value = (entry && entry[el.key] != null) ? Number(entry[el.key]) : el.min;
-                valueSpan.textContent = value.toFixed(el.decimals);
+                label.style.padding = '0 4px 0 0';
+                label.style.borderRadius = '4px';
+                label.style.fontSize = '13px';
+
+                const percentSpan = document.createElement('span');
+                percentSpan.className = 'modal-element-percentage';
+                const bestValue = el.best;
+                let per_show = (value / bestValue) * 100;
+                percentSpan.textContent = `${per_show.toFixed(0)}%`;
+                percentSpan.style.marginLeft = '8px';
+                percentSpan.style.fontWeight = 'bold';
+                percentSpan.style.color = getPercentageColor(value, el.min, el.best, el.max);
+                percentSpan.style.fontFamily = 'Oswald, sans-serif';
+                percentSpan.style.fontSize = '13px';
+
                 labelRow.appendChild(label);
-                labelRow.appendChild(valueSpan);
+                labelRow.appendChild(percentSpan);
+
                 // Progress bar
                 const barContainer = document.createElement('div');
                 barContainer.className = 'modal-progress-bar-container';
@@ -500,23 +506,28 @@
                 barContainer.style.overflow = 'hidden';
                 barContainer.style.userSelect = 'none';
                 barContainer.style.touchAction = 'none';
-                // Threshold marker
+
+                // Threshold marker at best value
                 const threshold = document.createElement('div');
                 threshold.className = 'progress-bar-threshold';
                 threshold.style.position = 'absolute';
-                threshold.style.left = '50%';
+                const minValue = el.min;
+                const maxValue = el.max;
+                const bestPercent = ((bestValue - minValue) / (maxValue - minValue)) * 100;
+                threshold.style.left = bestPercent + '%';
                 threshold.style.top = '0';
                 threshold.style.width = '2px';
                 threshold.style.height = '100%';
-                threshold.style.background = '#888';
-                threshold.style.opacity = '0.5';
+                threshold.style.background = '#1d740c';
+                threshold.style.opacity = '0.7';
                 threshold.style.zIndex = '2';
                 barContainer.appendChild(threshold);
+
                 // Fill
                 const fill = document.createElement('div');
                 fill.className = 'modal-progress-bar-fill';
                 fill.style.height = '100%';
-                fill.style.width = ((value - el.min) / (el.max - el.min) * 100) + '%';
+                fill.style.width = ((value - minValue) / (maxValue - minValue) * 100) + '%';
                 fill.style.borderRadius = '4px';
                 fill.style.background = COLORS[el.key.toLowerCase()];
                 fill.style.transition = 'width 0.2s';
@@ -532,8 +543,12 @@
                     const step = Math.pow(10, -el.decimals);
                     value = Math.round(value / step) * step;
                     value = Math.max(el.min, Math.min(el.max, value));
-                    valueSpan.textContent = value.toFixed(el.decimals);
+                    label.textContent = el.label + ': ' + value.toFixed(el.decimals);
                     fill.style.width = ((value - el.min) / (el.max - el.min) * 100) + '%';
+                    // 更新百分比和颜色，100% = value / bestValue * 100
+                    let per_show = (value / bestValue) * 100;
+                    percentSpan.textContent = `${per_show.toFixed(0)}%`;
+                    percentSpan.style.color = getPercentageColor(value, el.min, el.best, el.max);
                 }
                 barContainer.addEventListener('mousedown', function(e) {
                     setValueFromBar(e);
@@ -773,7 +788,7 @@
         }
 
         const isMobile = window.matchMedia('(max-width: 768px)').matches;
-        const hourObjs = isMobile ? getRecentHalfHours(5) : getRecentHalfHours(7); // Adjusted for mobile devices
+        const hourObjs = isMobile ? getRecentHalfHours(5) : getRecentHalfHours(10); // Adjusted for mobile devices
         
         // Formats labels for X-axis as 'Jul 28, 09' (24-hour)
         function formatDateLabel(dt) {
@@ -1318,10 +1333,7 @@
             pElement: 'P',
             caElement: 'CA',
             mgElement: 'MG',
-            khElement: 'KH',
-            orpElement: 'ORP',
-            phElement: 'PH',
-            tempElement: 'T'
+            khElement: 'KH'
         };
 
         // Get latest week label
@@ -1352,28 +1364,70 @@
             if (["N","P","CA","MG","KH"].includes(key)) {
                 const v = getLatestWeekValue(key);
                 value = v !== null && v !== undefined ? v : '-';
-            } else {
-                const v = getLatestRealtimeValue(key);
-                value = v !== null && v !== undefined ? v : '-';
-                // Only show ORP/PH/Temperature if there is a value
-                element.style.display = (value !== '-') ? 'list-item' : 'none';
             }
 
-            element.querySelector('span').textContent += value;
+            if (element) {
+                element.querySelector('span').textContent += value;
+            }
         });
 
         // --- Update Elements List with Data ---
         // Define max values for percentage calculation
-        const MAX_VALUES = {
-            N: 2,    // Nitrate max for bar (e.g., 20 ppm)
-            P: 0.03,   // Phosphate max for bar (e.g., 0.2 ppm)
-            CA: 400,  // Calcium max for bar (e.g., 500 ppm)
-            MG: 1320, // Magnesium max for bar (e.g., 1500 ppm)
-            KH: 8,   // Alkalinity max for bar (e.g., 12 dKH)
-            ORP: 380, // ORP max for bar (e.g., 450 mV)
-            PH: 8,  // PH max for bar (e.g., 8.5)
-            T: 24  // Temperature max for bar (e.g., 82 F)
-        };
+        // 统一获取最佳值
+        function getBestValue(key) {
+            return ELEMENTS_CONFIG[key] ? ELEMENTS_CONFIG[key].best : null;
+        }
+        // 统一获取最大值
+        function getMaxValue(key) {
+            return ELEMENTS_CONFIG[key] ? ELEMENTS_CONFIG[key].max : null;
+        }
+        // 统一获取最小值
+        function getMinValue(key) {
+            return ELEMENTS_CONFIG[key] ? ELEMENTS_CONFIG[key].min : null;
+        }
+        // 统一获取小数位
+        function getDecimals(key) {
+            return ELEMENTS_CONFIG[key] ? ELEMENTS_CONFIG[key].decimals : 0;
+        }
+
+        // 百分比颜色统一函数
+        function getPercentageColor(per_show) {
+            // New: color based on min, best, max
+            // Usage: getPercentageColor(value, min, best, max)
+            if (arguments.length < 4) return '#22c55e'; // fallback if not enough args
+            const value = arguments[0];
+            const min = arguments[1];
+            const best = arguments[2];
+            const max = arguments[3];
+            if (min === max) return '#22c55e';
+            if (value <= best) {
+                const range = best - min;
+                if (range === 0) return '#22c55e';
+                const gap = best - value;
+                const percent = gap / range;
+
+                if (percent < 0.2) {
+                    return '#22c55e'; // green
+                } else if (percent < 0.6) {
+                    return '#3b82f6'; // blue
+                } else {
+                    return '#a259e6'; // purple
+                }
+            } else {
+                const range = max - best;
+                if (range === 0) return '#22c55e';
+                const gap = value - best;
+                const percent = gap / range;
+
+                if (percent < 0.2) {
+                    return '#22c55e'; // green
+                } else if (percent < 0.6) {
+                    return '#facc15'; // yellow
+                } else {
+                    return '#ef4444'; // red
+                }
+            }
+        }
 
         function updateElementsList() {
             // Get the latest data for PH, ORP, Temp from realtimeData
@@ -1384,45 +1438,43 @@
             // For now, we'll use the last week's average from chart_data.
             const latestWeeklyData = labels.length > 0 ? rawData.find(d => getWeekStart(d.date) === labels[labels.length - 1]) : null;
 
-            const elementsToUpdate = { 
-                N: { id: 'nElement', name: 'Nitrate (N):', value: latestWeeklyData ? latestWeeklyData.N : null, decimals: 1 },
-                P: { id: 'pElement', value: latestWeeklyData ? latestWeeklyData.P : null, decimals: 2 },
-                CA: { id: 'caElement', value: latestWeeklyData ? latestWeeklyData.CA : null, decimals: 0 },
-                MG: { id: 'mgElement', value: latestWeeklyData ? latestWeeklyData.MG : null, decimals: 0 },
-                KH: { id: 'khElement', value: latestWeeklyData ? latestWeeklyData.KH : null, decimals: 1 },
-                ORP: { id: 'orpElement', value: latestRealtimeData ? latestRealtimeData.ORP : null, decimals: 0 },
-                PH: { id: 'phElement', value: latestRealtimeData ? latestRealtimeData.PH : null, decimals: 1 },
-                T: { id: 'tempElement', value: latestRealtimeData ? latestRealtimeData.T : null, decimals: 1 } // Use 'T' for temperature
+            const elementsToUpdate = {
+                N: { id: 'nElement', name: 'Nitrate (N):', value: latestWeeklyData ? latestWeeklyData.N : null, decimals: ELEMENTS_CONFIG.N.decimals },
+                P: { id: 'pElement', value: latestWeeklyData ? latestWeeklyData.P : null, decimals: ELEMENTS_CONFIG.P.decimals },
+                CA: { id: 'caElement', value: latestWeeklyData ? latestWeeklyData.CA : null, decimals: ELEMENTS_CONFIG.CA.decimals },
+                MG: { id: 'mgElement', value: latestWeeklyData ? latestWeeklyData.MG : null, decimals: ELEMENTS_CONFIG.MG.decimals },
+                KH: { id: 'khElement', value: latestWeeklyData ? latestWeeklyData.KH : null, decimals: ELEMENTS_CONFIG.KH.decimals }
             };
 
-            const BAR_FULL_AT = 0.7; // 70% of max is 100% for the bar
+            const BAR_FULL_AT = 0.7; // 70% of best is 100% for the bar
             for (const key in elementsToUpdate) {
                 const elementInfo = elementsToUpdate[key];
                 const listItem = document.getElementById(elementInfo.id);
                 if (listItem) {
                     const percentageSpan = listItem.querySelector('.element-percentage');
                     const progressBarFill = listItem.querySelector('.progress-bar-fill');
+                    const progressBarContainer = listItem.querySelector('.progress-bar-container');
+                    const thresholdBar = listItem.querySelector('.progress-bar-threshold');
                     const value = elementInfo.value;
-                    const maxValue = MAX_VALUES[key];
+                    const minValue = getMinValue(key);
+                    const maxValue = getMaxValue(key);
+                    const bestValue = getBestValue(key);
 
-                    if (value !== null && typeof value === 'number') {
-                        let per_show = (value / (maxValue)) * 100;
-                        let percentage = per_show * BAR_FULL_AT;
+                    // Set threshold marker at best value
+                    if (thresholdBar) {
+                        const bestPercent = ((bestValue - minValue) / (maxValue - minValue)) * 100;
+                        thresholdBar.style.left = bestPercent + '%';
+                        thresholdBar.style.opacity = '0.7';
+                    }
+
+                    if (value !== null && typeof value === 'number' && bestValue) {
+                        let per_show = (value / bestValue) * 100;
+                        // Progress bar fill: left=min, right=max
+                        let percentage = ((value - minValue) / (maxValue - minValue)) * 100;
                         percentageSpan.textContent = `${per_show.toFixed(0)}%`;
                         progressBarFill.style.width = `${percentage}%`;
                         progressBarFill.style.backgroundColor = COLORS[key.toLowerCase()];
-                        // Set color by range
-                        if (per_show < 50) {
-                            percentageSpan.style.color = '#a259e6'; // purple
-                        } else if (per_show < 80) {
-                            percentageSpan.style.color = '#3b82f6'; // blue
-                        } else if (per_show < 120) {
-                            percentageSpan.style.color = '#22c55e'; // green
-                        } else if (per_show < 150) {
-                            percentageSpan.style.color = '#facc15'; // yellow
-                        } else {
-                            percentageSpan.style.color = '#ef4444'; // red
-                        }
+                        percentageSpan.style.color = getPercentageColor(value, minValue, bestValue, maxValue);
                     } else {
                         percentageSpan.textContent = 'N/A';
                         percentageSpan.style.color = '#333';
