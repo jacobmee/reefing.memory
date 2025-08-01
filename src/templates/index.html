@@ -283,7 +283,7 @@
                 <div id="addEntryModal" style="display:none; position:fixed; z-index:1000; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.25); justify-content:center; align-items:center;">
                     <div style="background:#fff; border-radius:8px; box-shadow:0 8px 32px rgba(0,0,0,0.18); padding:12px 24px 24px 24px; min-width:320px; max-width:95vw; position:relative;">
                         <button id="closeAddEntryModal" style="position:absolute; top:12px; right:12px; background:none; border:none; font-size:1.5em; color:#888; cursor:pointer;">&times;</button>
-                        <h4>Element Entry</h4>
+                        <h4>Element Entries</h4>
                         <form id="addEntryForm" style="display:flex; flex-direction:column; gap:16px;">
                             <div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 8px;">
                                 <button id="prevEntryBtn" type="button" title="Previous" style="background: none; border: none; cursor: pointer; color: #3b82f6; display: flex; align-items: center; justify-content: center; height: 1.6em; width: 1.6em; padding: 0;">
@@ -393,9 +393,9 @@
         const ELEMENTS_CONFIG = {
             N:    { label: 'Nitrate',    min: 0,    best: 5,   max: 20,   decimals: 1 },
             P:    { label: 'Phosphate',  min: 0,    best: 0.06,max: 0.2,  decimals: 2 },
-            CA:   { label: 'Calcium',    min: 300,  best: 400, max: 500,  decimals: 0 },
-            MG:   { label: 'Magnesium',  min: 1000, best: 1320,max: 1600, decimals: 0 },
-            KH:   { label: 'Alkalinity', min: 4,    best: 8,   max: 14,   decimals: 1 }
+            CA:   { label: 'Calcium',    min: 350,  best: 400, max: 450,  decimals: 0 },
+            MG:   { label: 'Magnesium',  min: 1100, best: 1320,max: 1500, decimals: 0 },
+            KH:   { label: 'Alkalinity', min: 5,    best: 8,   max: 12,   decimals: 1 }
         };
 
         // modalElements 用于弹窗渲染
@@ -455,11 +455,10 @@
             modalElementList.innerHTML = '';
             modalElements.forEach((el, idx) => {
                 const li = document.createElement('li');
-                li.setAttribute('draggable', 'true');
                 li.style.display = 'flex';
                 li.style.flexDirection = 'column';
                 li.style.alignItems = 'flex-start';
-                li.style.background = '#f3f1f1';
+                li.style.background = 'transparent';
                 li.style.borderRadius = '4px';
                 li.style.padding = '8px 10px 10px 10px';
                 li.style.marginBottom = '0';
@@ -499,7 +498,7 @@
                 const barContainer = document.createElement('div');
                 barContainer.className = 'modal-progress-bar-container';
                 barContainer.style.width = '100%';
-                barContainer.style.height = '8px';
+                barContainer.style.height = '12px';
                 barContainer.style.background = '#e0e0e0';
                 barContainer.style.borderRadius = '4px';
                 barContainer.style.position = 'relative';
@@ -550,7 +549,8 @@
                     percentSpan.textContent = `${per_show.toFixed(0)}%`;
                     percentSpan.style.color = getPercentageColor(value, el.min, el.best, el.max);
                 }
-                barContainer.addEventListener('mousedown', function(e) {
+                // 整个li区域都能拖动
+                li.addEventListener('mousedown', function(e) {
                     setValueFromBar(e);
                     function moveHandler(ev) { setValueFromBar(ev); }
                     function upHandler() {
@@ -560,7 +560,7 @@
                     document.addEventListener('mousemove', moveHandler);
                     document.addEventListener('mouseup', upHandler);
                 });
-                barContainer.addEventListener('touchstart', function(e) {
+                li.addEventListener('touchstart', function(e) {
                     setValueFromBar(e);
                     function moveHandler(ev) { setValueFromBar(ev); }
                     function upHandler() {
@@ -582,7 +582,6 @@
                 // Compose
                 li.appendChild(labelRow);
                 li.appendChild(barContainer);
-                addDnDHandlers(li);
                 modalElementList.appendChild(li);
             });
         }
