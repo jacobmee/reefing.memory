@@ -1,1491 +1,572 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>Reefing Memory</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="https://fonts.googleapis.com/css?family=Oswald:300,700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css?family=Roboto:300,700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css?family=Lato:300,700&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-        // Auto-refresh page every hour (3600000 ms)
-        setTimeout(function() { window.location.reload(); }, 3600000);
-    </script>
+    <title>项目时间线</title>
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Base styles for all screen sizes (Mobile-First Approach) */
+        @media (max-width: 640px) and (orientation: portrait) {
+            body {
+                transform: scale(0.5);
+                transform-origin: top left;
+                width: 200vw;
+                height: 200vh;
+                overflow-x: auto;
+            }
+        }
+        /* 操作按钮默认隐藏，仅在父区域 hover 时显示 */
+        .action-btn, .header-action-btn, .footer-action-btn, #add-node-button {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+        .timeline-item:hover .action-btn,
+        .action-btn:hover {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        /* header-action-btn: show when header-content's parent hovered or button hovered */
+        .container:hover > .header-action-btn,
+        .header-action-btn:hover {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        /* footer-action-btn: show when container or button hovered */
+        footer .container:hover .footer-action-btn,
+        .footer-action-btn:hover {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        /* add-node-button: show when flex container or button hovered */
+        .flex.justify-center:hover #add-node-button,
+        #add-node-button:hover {
+            opacity: 1;
+            pointer-events: auto;
+        }
         body {
-            background: #f3f1f1;
-            min-height: 100vh;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
         }
-
-        /* Main container for all charts */
-        .charts-container {
-            width: 100%;
-            min-height: 80vh;
-            margin: 4px auto;
-            padding: 4px 8px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        /* Individual chart card styles */
-        .chart-card {
-            background: #fff;
-            border-radius: 4px;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
-            padding: 10px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-shrink: 0;
-            width: 100%;
-            box-sizing: border-box;
-        }
-
-        /* Heights for canvases on mobile (default) */
-        /* UPDATED: Increased the height of the real-time chart for better visibility. */
-        #realtimeChart {
-            width: 100%;
-            height: 28vh; /* This gives it a significant portion of the screen */
-        }
-        
-        #staticChartLeft,
-        #staticChartRight {
-            width: 100%;
-            height: 28vh;
-        }
-
-        /* Wrapper for the two bottom charts (default stacked on mobile) */
-        .bottom-charts-wrapper {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            flex-grow: 1;
-            width: 100%;
-        }
-
-        /* New styles for the elements list section */
-        .elements-list {
-            background: #fff;
-            padding: 25px;
-            padding-top: 10px;
-            border-radius: 4px;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
-            font-family: 'Oswald', sans-serif;
-            font-size: 14px;
-            flex-shrink: 0;
-            width: 100%;
-            box-sizing: border-box;
-            /* UPDATED: Reduced the minimum height on mobile to make it less long */
-            min-height: 23vh;
-            overflow-y: auto;
-        }
-        .elements-list h4 {
-            margin: 10px 0 24px 0;
-            font-family: 'Lato', sans-serif;
-            font-size: 23px;
-            text-align: center;
-            color: #333;
-        }
-
-        /* --- START OF CHANGES FOR MOBILE ELEMENTS LIST LAYOUT --- */
-        .elements-list ul {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: space-between;
-            gap: 8px 32px;
-        }
-
-        .elements-list li {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            width: calc(50% - 16px);
-        }
-
-        /* Fix: In pop modal, force li width to 100% */
-        #addEntryModal .elements-list li,
-        #addEntryModal #modalElementList li {
-            width: 100% !important;
-            margin-bottom: 0;
-            box-sizing: border-box;
-        }
-
-        .elements-pop-list li {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            width: calc(50% - 16px);
-            margin-bottom: 0;
-            box-sizing: border-box;
-        }
-        /* --- END OF CHANGES FOR MOBILE ELEMENTS LIST LAYOUT --- */
-
-        .elements-list li:last-child {
-            margin-bottom: 0;
-        }
-
-        .element-label-row {
-            display: flex;
-            justify-content: space-between;
-            width: 100%;
-            margin-bottom: 8px;
-        }
-
-        .element-label {
-            font-weight: normal;
-            color: #555;
-        }
-
-        .element-percentage {
-            font-weight: bold;
-            color: #333;
-            min-width: 40px;
-            text-align: right;
-        }
-
-        .progress-bar-container {
-            width: 100%;
-            height: 6px;
-            background-color: #e0e0e0;
-            border-radius: 4px;
-            overflow: hidden;
+        /* 时间线样式 */
+        .timeline {
             position: relative;
         }
-        .progress-bar-threshold {
+        .timeline-item {
+            position: relative;
+            padding: 1rem 0;
+            width: 50%;
+        }
+        .timeline-item:nth-child(even) {
+            margin-left: 50%;
+            padding-left: 5.5rem; /* 增大内容和图片的间距 */
+            text-align: left;
+            /* 向左移动10% */
+            transform: translateX(10%);
+        }
+        .timeline-item:nth-child(odd) {
+            margin-right: 50%;
+            padding-right: 5.5rem; /* 增大内容和图片的间距 */
+            text-align: right;
+            /* 向右移动10% */
+            transform: translateX(-10%);
+        }
+        .timeline-dot {
             position: absolute;
-            left: 70%;
-            top: 0;
-            width: 2px;
-            height: 100%;
-            background: #1d740c;
-            opacity: 0.7;
-            z-index: 2;
-        }
-
-        .progress-bar-fill {
-            height: 100%;
-            width: 0%;
-            border-radius: 2px;
-            transition: width 0.5s ease-in-out;
-        }
-
-        .top-section {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 10;
+            background-color: white;
             display: flex;
-            flex-direction: column; /* Mobile: stack vertically */
-            gap: 8px;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            border: 4px solid;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .timeline-item:nth-child(odd) .timeline-dot {
+            right: 20px;
+            /* 文字在右，整体右移30% */
+            transform: translateY(-50%) translateX(30%);
+        }
+        .timeline-item:nth-child(odd) .bg-white {
+            margin-right: 70px;
+        }
+        .timeline-item:nth-child(even) .timeline-dot {
+            left: 20px;
+            /* 文字在左，整体左移30% */
+            transform: translateY(-50%) translateX(-30%);
+        }
+        .timeline-item:nth-child(even) .bg-white {
+            margin-left: 70px;
+        }
+        .timeline-item:nth-child(odd) .timeline-dot {
+            right: 20px;
+            /* 文字在右，整体右移70% */
+            transform: translateY(-50%) translateX(30%);
+        }
+        .timeline-item:nth-child(even) .timeline-dot {
+            left: 20px;
+            /* 文字在左，整体左移70% */
+            transform: translateY(-50%) translateX(-30%);
+        }
+        .timeline-divider {
+            height: 4px;
             width: 100%;
+            margin: 0.5rem 0;
         }
-
-        /* New container for the two static charts */
-        .static-charts-wrapper {
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 50;
+            background: rgba(0,0,0,0.5);
+            align-items: center;
+            justify-content: center;
+        }
+        .modal.active {
             display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-
-        /* --- Desktop Layout (min-width: 768px) --- */
-        @media (min-width: 768px) {
-            body {
-                align-items: center;
-            }
-
-            .charts-container {
-                flex-direction: column;
-                min-height: 80vh;
-            }
-
-            /* UPDATED: Adjusted height for a balanced look on desktop */
-            #realtimeChart {
-                height: 48vh;
-            }
-
-            #staticChartLeft,
-            #staticChartRight {
-                height: 100%;
-            }
-            
-            .static-charts-wrapper {
-                flex-direction: row;
-                flex-grow: 1;
-            }
-
-            .static-charts-wrapper > .chart-card {
-                flex: 1;
-            }
-
-            .bottom-charts-wrapper {
-                flex-direction: row;
-                flex-grow: 1;
-                align-items: stretch;
-            }
-
-            .bottom-charts-wrapper > .chart-card {
-                flex: 1;
-            }
-
-            /* UPDATED: Adjusted height for a balanced look on desktop */
-            .top-section {
-                flex-direction: row;
-                align-items: stretch;
-                height: 45vh;
-            }
-
-            .elements-list {
-                width: 280px;
-                flex-shrink: 0;
-                flex-basis: 280px;
-                /* 桌面视图下，min-height会被flexbox的拉伸行为覆盖 */
-            }
-
-            /* --- Desktop Specific Overrides for elements-list ul/li --- */
-            .elements-list ul {
-                display: block;
-                gap: 0;
-            }
-            .elements-list li {
-                width: 100%;
-                margin-bottom: 9px;
-            }
-            .elements-list li:last-child {
-                margin-bottom: 0;
-            }
-            /* --- END Desktop Specific Overrides --- */
-
-            .chart-card {
-                width: auto;
-                flex-grow: 1;
-            }
         }
     </style>
 </head>
-<body>
-    <div class="charts-container">
-        <div class="top-section">
-            <div class="elements-list">
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px;">
-                    <h4 style="margin:0;">Reefing Memory</h4>
-                    <button id="addEntryBtn" title="Add new entry" style="background: none; border: none; cursor: pointer; margin-left: 8px; color: #3b82f6; display: flex; align-items: center; justify-content: center; height: 1.6em; width: 1.6em; padding: 0;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-                    </button>
-                </div>
-                <div id="addEntryModal" style="display:none; position:fixed; z-index:1000; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.25); justify-content:center; align-items:center;">
-                    <div style="background:#fff; border-radius:8px; box-shadow:0 8px 32px rgba(0,0,0,0.18); padding:12px 24px 24px 24px; min-width:320px; max-width:95vw; position:relative;">
-                        <button id="closeAddEntryModal" style="position:absolute; top:12px; right:12px; background:none; border:none; font-size:1.5em; color:#888; cursor:pointer;">&times;</button>
-                        <h4>Element Entries</h4>
-                        <form id="addEntryForm" style="display:flex; flex-direction:column; gap:16px;">
-                            <div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 8px;">
-                                <button id="prevEntryBtn" type="button" title="Previous" style="background: none; border: none; cursor: pointer; color: #3b82f6; display: flex; align-items: center; justify-content: center; height: 1.6em; width: 1.6em; padding: 0;">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><polyline points="15 18 9 12 15 6"/></svg>
-                                </button>
-                                <label for="entryDate" style="font-family:'Oswald',sans-serif; margin:0 4px 0 0;">Date:</label>
-                                <input id="entryDate" name="date" type="date" required style="font-size:1em; padding:2px 8px; border-radius:4px; border:1px solid #ccc; font-family:'Oswald',sans-serif; min-width:120px; text-align:center;"/>
-                                <button id="nextEntryBtn" type="button" title="Next" style="background: none; border: none; cursor: pointer; color: #3b82f6; display: flex; align-items: center; justify-content: center; height: 1.6em; width: 1.6em; padding: 0;">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><polyline points="9 18 15 12 9 6"/></svg>
-                                </button>
-                            </div>
-                            <ul id="modalElementList" style="list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:10px;">
-                                </ul>
-                            <button type="submit" style="margin-top:12px; background:#3b82f6; color:#fff; border:none; border-radius:4px; font-size:1.1em; padding:8px 32px; cursor:pointer; width:fit-content; align-self:center;">Save</button>
-                        </form>
-                    </div>
-                </div>
-                <ul>
-                    <li id="nElement">
-                        <div class="element-label-row">
-                            <span class="element-label">Nitrate: </span>
-                            <span class="element-percentage"></span>
-                        </div>
-                        <div class="progress-bar-container">
-                            <div class="progress-bar-threshold"></div>
-                            <div class="progress-bar-fill" data-element="n"></div>
-                        </div>
-                    </li>
-                    <li id="pElement">
-                        <div class="element-label-row">
-                            <span class="element-label">Phosphate: </span>
-                            <span class="element-percentage"></span>
-                        </div>
-                        <div class="progress-bar-container">
-                            <div class="progress-bar-threshold"></div>
-                            <div class="progress-bar-fill" data-element="p"></div>
-                        </div>
-                    </li>
-                    <li id="caElement">
-                        <div class="element-label-row">
-                            <span class="element-label">Calcium: </span>
-                            <span class="element-percentage"></span>
-                        </div>
-                        <div class="progress-bar-container">
-                            <div class="progress-bar-threshold"></div>
-                            <div class="progress-bar-fill" data-element="ca"></div>
-                        </div>
-                    </li>
-                    <li id="mgElement">
-                        <div class="element-label-row">
-                            <span class="element-label">Magnesium: </span>
-                            <span class="element-percentage"></span>
-                        </div>
-                        <div class="progress-bar-container">
-                            <div class="progress-bar-threshold"></div>
-                            <div class="progress-bar-fill" data-element="mg"></div>
-                        </div>
-                    </li>
-                    <li id="khElement">
-                        <div class="element-label-row">
-                            <span class="element-label">Alkalinity: </span>
-                            <span class="element-percentage"></span>
-                        </div>
-                        <div class="progress-bar-container">
-                            <div class="progress-bar-threshold"></div>
-                            <div class="progress-bar-fill" data-element="kh"></div>
-                        </div>
-                    </li>
-                </ul>
-            </div>
-            <div class="static-charts-wrapper">
-                <div class="chart-card">
-                    <canvas id="staticChartLeft"></canvas>
-                </div>
-                <div class="chart-card">
-                    <canvas id="staticChartRight"></canvas>
-                </div>
-            </div>
-        </div>
+<body class="bg-gray-100 text-gray-800">
 
-        <div class="bottom-charts-wrapper" style="display: flex; flex-direction: row; gap: 24px; align-items: flex-start; width: 100%;">
-            <div class="chart-card" style="flex: 2 1 0;">
-                <canvas id="realtimeChart"></canvas>
+    <!-- Header Section -->
+    <header class="bg-gray-800 text-white p-6 md:p-8 rounded-b-lg shadow-xl">
+        <div class="container mx-auto flex flex-col md:flex-row justify-between items-center">
+            <div id="header-content" class="text-center md:text-left">
+                <h1 id="main-title" class="text-3xl md:text-4xl lg:text-5xl font-extrabold tracking-tight mb-2">THE LOVE STORY</h1>
+                <p id="subtitle" class="text-lg md:text-xl text-gray-300">A Journey Through Time for you or what you love</p>
             </div>
-            
+            <button onclick="openHeaderModal()" class="header-action-btn mt-4 md:mt-0 px-6 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors shadow-md">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.389-8.379-2.83-2.828z" />
+                </svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Section -->
+    <main class="container mx-auto px-4 py-8">
+        <div class="flex justify-center mb-8">
+            <button id="add-node-button" onclick="openAddModal()" class="header-action-btn flex items-center justify-center w-14 h-14 bg-green-600 text-white rounded-full hover:bg-green-700 transition-colors shadow-lg text-3xl">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" />
+                </svg>
+            </button>
+        </div>
+        <div id="timeline-container" class="timeline relative max-w-4xl mx-auto mt-12">
+            <!-- Timeline items will be rendered here by JavaScript -->
+        </div>
+    </main>
+
+    <!-- Footer Section -->
+    <footer class="bg-gray-800 text-white p-4 text-center rounded-t-lg mt-8 shadow-xl">
+        <div class="container mx-auto flex items-center justify-center gap-2">
+            <p id="footer-text" class="text-sm mb-0">© 2024 The Love Company. All rights reserved.</p>
+            <button onclick="openFooterModal()" class="footer-action-btn px-4 py-1 text-xs bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors shadow-md ml-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.389-8.379-2.83-2.828z" />
+                </svg>
+            </button>
+        </div>
+    </footer>
+
+    <!-- Modals for editing -->
+
+    <!-- Modal for adding/editing a timeline node -->
+    <div id="node-modal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-50">
+        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md">
+            <h2 id="modal-title" class="text-2xl font-bold mb-4">增加新节点</h2>
+            <form id="node-form" class="space-y-4">
+                <div>
+                    <label for="nodeName" class="block text-sm font-medium text-gray-700">节点名 (如: Week 1)</label>
+                    <input type="text" id="nodeName" name="nodeName" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" required>
+                </div>
+                <div>
+                    <label for="title" class="block text-sm font-medium text-gray-700">标题 (如: Initial Consult)</label>
+                    <input type="text" id="title" name="title" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" required>
+                </div>
+                <div>
+                    <label for="content" class="block text-sm font-medium text-gray-700">内容 (不超过50字)</label>
+                    <textarea id="content" name="content" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" maxlength="50" required></textarea>
+                </div>
+                <div>
+                    <label for="color" class="block text-sm font-medium text-gray-700">颜色</label>
+                    <input type="color" id="color" name="color" value="#10b981" class="mt-1 block w-full h-10 rounded-md border-gray-300 shadow-sm p-1">
+                </div>
+                <div>
+                    <label for="imageUpload" class="block text-sm font-medium text-gray-700">图片 (100x100 裁剪)</label>
+                    <input type="file" id="imageUpload" name="imageUpload" accept="image/*" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                </div>
+                <div class="flex justify-end space-x-2">
+                    <button type="button" onclick="closeModal()" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">取消</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">保存</button>
+                </div>
+            </form>
         </div>
     </div>
+
+    <!-- Modal for editing header -->
+    <div id="header-modal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-50">
+        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4">修改头部</h2>
+            <form id="header-form" class="space-y-4">
+                <div>
+                    <label for="modal-main-title" class="block text-sm font-medium text-gray-700">主标题</label>
+                    <input type="text" id="modal-main-title" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2">
+                </div>
+                <div>
+                    <label for="modal-subtitle" class="block text-sm font-medium text-gray-700">副标题</label>
+                    <input type="text" id="modal-subtitle" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2">
+                </div>
+                <div class="flex justify-end space-x-2">
+                    <button type="button" onclick="closeModal()" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">取消</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for editing footer -->
+    <div id="footer-modal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-50">
+        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4">修改页脚</h2>
+            <form id="footer-form" class="space-y-4">
+                <div>
+                    <label for="modal-footer-text" class="block text-sm font-medium text-gray-700">页脚文本</label>
+                    <input type="text" id="modal-footer-text" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2">
+                </div>
+                <div class="flex justify-end space-x-2">
+                    <button type="button" onclick="closeModal()" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">取消</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
-        // --- Modal logic for adding new entry ---
-        // 格式化 'Mon DD' 为 YYYY-MM-DD
-        function formatDateYYYYMMDD(dateStr) {
-            const d = new Date(dateStr + ', ' + new Date().getFullYear());
-            const yyyy = d.getFullYear();
-            const mm = String(d.getMonth() + 1).padStart(2, '0');
-            const dd = String(d.getDate()).padStart(2, '0');
-            return `${yyyy}-${mm}-${dd}`;
+        // 动态加载header/footer内容
+        async function fetchAndRenderHeaderFooter() {
+            try {
+                const response = await fetch('/api/header_footer');
+                if (!response.ok) return;
+                const data = await response.json();
+                if (data.header) {
+                    document.getElementById('main-title').textContent = data.header.main_title || '';
+                    document.getElementById('subtitle').textContent = data.header.subtitle || '';
+                }
+                if (data.footer) {
+                    document.getElementById('footer-text').textContent = data.footer.footer_text || '';
+                }
+            } catch (e) { /* ignore */ }
         }
-        const addEntryBtn = document.getElementById('addEntryBtn');
-        const addEntryModal = document.getElementById('addEntryModal');
-        const closeAddEntryModal = document.getElementById('closeAddEntryModal');
-        const addEntryForm = document.getElementById('addEntryForm');
-        const modalElementList = document.getElementById('modalElementList');
-        const entryDateInput = document.getElementById('entryDate');
+        const API_URL = 'http://192.168.0.28:5003/api/timeline';
+        let editingNodeId = null;
 
-        // Element keys and display names for modal
-        // 元素参数统一结构体
-        const ELEMENTS_CONFIG = {
-            N:    { label: 'Nitrate',    min: 0,    best: 5,   max: 20,   decimals: 1 },
-            P:    { label: 'Phosphate',  min: 0,    best: 0.06,max: 0.2,  decimals: 2 },
-            CA:   { label: 'Calcium',    min: 350,  best: 400, max: 450,  decimals: 0 },
-            MG:   { label: 'Magnesium',  min: 1100, best: 1320,max: 1500, decimals: 0 },
-            KH:   { label: 'Alkalinity', min: 5,    best: 8,   max: 12,   decimals: 1 }
-        };
-
-        // modalElements 用于弹窗渲染
-        const modalElements = [
-            { key: 'N', ...ELEMENTS_CONFIG.N },
-            { key: 'P', ...ELEMENTS_CONFIG.P },
-            { key: 'CA', ...ELEMENTS_CONFIG.CA },
-            { key: 'MG', ...ELEMENTS_CONFIG.MG },
-            { key: 'KH', ...ELEMENTS_CONFIG.KH }
-        ];
-
-        // --- Modal navigation state ---
-        let modalEntryIndex = null; // null means latest
-
-        // Drag and drop helpers
-        let dragSrcEl = null;
-        function handleDragStart(e) {
-            dragSrcEl = this;
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/html', this.outerHTML);
-            this.classList.add('dragElem');
-        }
-        function handleDragOver(e) {
-            if (e.preventDefault) e.preventDefault();
-            this.classList.add('over');
-            return false;
-        }
-        function handleDragLeave(e) {
-            this.classList.remove('over');
-        }
-        function handleDrop(e) {
-            if (e.stopPropagation) e.stopPropagation();
-            if (dragSrcEl !== this) {
-                this.parentNode.removeChild(dragSrcEl);
-                const dropHTML = e.dataTransfer.getData('text/html');
-                this.insertAdjacentHTML('beforebegin', dropHTML);
-                const dropElem = this.previousSibling;
-                addDnDHandlers(dropElem);
+        // Fetch and render timeline nodes
+        async function fetchAndRenderNodes() {
+            try {
+                const response = await fetch(API_URL);
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                const nodes = await response.json();
+                renderTimeline(nodes);
+            } catch (error) {
+                console.error("Failed to fetch timeline nodes:", error);
+                renderTimeline([]); // 不显示任何节点
             }
-            this.classList.remove('over');
-            return false;
-        }
-        function handleDragEnd(e) {
-            this.classList.remove('over');
-            this.classList.remove('dragElem');
-        }
-        function addDnDHandlers(elem) {
-            elem.addEventListener('dragstart', handleDragStart, false);
-            elem.addEventListener('dragover', handleDragOver, false);
-            elem.addEventListener('dragleave', handleDragLeave, false);
-            elem.addEventListener('drop', handleDrop, false);
-            elem.addEventListener('dragend', handleDragEnd, false);
         }
 
-        function renderModalEntry(entry) {
-            // entry: object with keyrenderModalEntrys N, P, CA, MG, KH, date
-            modalElementList.innerHTML = '';
-            modalElements.forEach((el, idx) => {
-                const li = document.createElement('li');
-                li.style.display = 'flex';
-                li.style.flexDirection = 'column';
-                li.style.alignItems = 'flex-start';
-                li.style.background = 'transparent';
-                li.style.borderRadius = '4px';
-                li.style.padding = '8px 10px 10px 10px';
-                li.style.marginBottom = '0';
-
-                // Label row
-                const labelRow = document.createElement('div');
-                labelRow.style.display = 'flex';
-                labelRow.style.justifyContent = 'space-between';
-                labelRow.style.alignItems = 'center'; // Add this for vertical alignment
-                labelRow.style.width = '100%';
-                labelRow.style.marginBottom = '4px';
-
-                const label = document.createElement('span');
-                let value = (entry && entry[el.key] != null) ? Number(entry[el.key]) : el.min;
-                label.textContent = el.label + ': ' + value.toFixed(el.decimals);
-                label.style.fontFamily = 'Oswald, sans-serif';
-                label.style.color = '#555';
-                label.style.padding = '0 4px 0 0';
-                label.style.borderRadius = '4px';
-                label.style.fontSize = '13px';
-
-                const percentSpan = document.createElement('span');
-                percentSpan.className = 'modal-element-percentage';
-                const bestValue = el.best;
-                let per_show = (value / bestValue) * 100;
-                percentSpan.textContent = `${per_show.toFixed(0)}%`;
-                percentSpan.style.marginLeft = '8px';
-                percentSpan.style.fontWeight = 'bold';
-                percentSpan.style.color = getPercentageColor(value, el.min, el.best, el.max);
-                percentSpan.style.fontFamily = 'Oswald, sans-serif';
-                percentSpan.style.fontSize = '13px';
-
-                labelRow.appendChild(label);
-                labelRow.appendChild(percentSpan);
-
-                // Progress bar
-                const barContainer = document.createElement('div');
-                barContainer.className = 'modal-progress-bar-container';
-                barContainer.style.width = '100%';
-                barContainer.style.height = '12px';
-                barContainer.style.background = '#e0e0e0';
-                barContainer.style.borderRadius = '4px';
-                barContainer.style.position = 'relative';
-                barContainer.style.overflow = 'hidden';
-                barContainer.style.userSelect = 'none';
-                barContainer.style.touchAction = 'none';
-
-                // Threshold marker at best value
-                const threshold = document.createElement('div');
-                threshold.className = 'progress-bar-threshold';
-                threshold.style.position = 'absolute';
-                const minValue = el.min;
-                const maxValue = el.max;
-                const bestPercent = ((bestValue - minValue) / (maxValue - minValue)) * 100;
-                threshold.style.left = bestPercent + '%';
-                threshold.style.top = '0';
-                threshold.style.width = '2px';
-                threshold.style.height = '100%';
-                threshold.style.background = '#1d740c';
-                threshold.style.opacity = '0.7';
-                threshold.style.zIndex = '2';
-                barContainer.appendChild(threshold);
-
-                // Fill
-                const fill = document.createElement('div');
-                fill.className = 'modal-progress-bar-fill';
-                fill.style.height = '100%';
-                fill.style.width = ((value - minValue) / (maxValue - minValue) * 100) + '%';
-                fill.style.borderRadius = '4px';
-                fill.style.background = COLORS[el.key.toLowerCase()];
-                fill.style.transition = 'width 0.2s';
-                barContainer.appendChild(fill);
-                // Drag/Click interaction
-                function setValueFromBar(e) {
-                    if (e.preventDefault) e.preventDefault();
-                    const rect = barContainer.getBoundingClientRect();
-                    const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
-                    let percent = Math.max(0, Math.min(1, x / rect.width));
-                    value = el.min + percent * (el.max - el.min);
-                    // Snap to step
-                    const step = Math.pow(10, -el.decimals);
-                    value = Math.round(value / step) * step;
-                    value = Math.max(el.min, Math.min(el.max, value));
-                    label.textContent = el.label + ': ' + value.toFixed(el.decimals);
-                    fill.style.width = ((value - el.min) / (el.max - el.min) * 100) + '%';
-                    // 更新百分比和颜色，100% = value / bestValue * 100
-                    let per_show = (value / bestValue) * 100;
-                    percentSpan.textContent = `${per_show.toFixed(0)}%`;
-                    percentSpan.style.color = getPercentageColor(value, el.min, el.best, el.max);
-                }
-                // 整个li区域都能拖动
-                li.addEventListener('mousedown', function(e) {
-                    setValueFromBar(e);
-                    function moveHandler(ev) { setValueFromBar(ev); }
-                    function upHandler() {
-                        document.removeEventListener('mousemove', moveHandler);
-                        document.removeEventListener('mouseup', upHandler);
-                    }
-                    document.addEventListener('mousemove', moveHandler);
-                    document.addEventListener('mouseup', upHandler);
-                });
-                li.addEventListener('touchstart', function(e) {
-                    setValueFromBar(e);
-                    function moveHandler(ev) { setValueFromBar(ev); }
-                    function upHandler() {
-                        document.removeEventListener('touchmove', moveHandler);
-                        document.removeEventListener('touchend', upHandler);
-                    }
-                    document.addEventListener('touchmove', moveHandler);
-                    document.addEventListener('touchend', upHandler);
-                });
-                // Store value on li for submit
-                li.dataset.key = el.key;
-                li.dataset.value = value;
-                // Update value on change
-                function updateValueOnBar() {
-                    li.dataset.value = value;
-                }
-                barContainer.addEventListener('mouseup', updateValueOnBar);
-                barContainer.addEventListener('touchend', updateValueOnBar);
-                // Compose
-                li.appendChild(labelRow);
-                li.appendChild(barContainer);
-                modalElementList.appendChild(li);
+        // Render the timeline UI
+        function renderTimeline(nodes) {
+            const container = document.getElementById('timeline-container');
+            container.innerHTML = '';
+            nodes = nodes.slice().reverse();
+            nodes.forEach((node, index) => {
+                const isEven = index % 2 === 1;
+                const alignmentClass = 'timeline-item';
+                // For even (left) items, place action buttons at top right; for odd (right), at top left
+                const actionBtnDiv = isEven
+                  ? `<div class="absolute top-2 right-2 flex space-x-2">
+                        <button onclick="openEditModal('${node.id}')" class="action-btn rounded-full bg-blue-500 hover:bg-blue-600 text-white shadow-md p-2 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-300" title="编辑">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.389-8.379-2.83-2.828z" />
+                            </svg>
+                        </button>
+                        <button onclick="deleteNode('${node.id}')" class="action-btn rounded-full bg-red-500 hover:bg-red-600 text-white shadow-md p-2 transition-colors focus:outline-none focus:ring-2 focus:ring-red-300" title="删除">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    </div>`
+                  : `<div class="absolute top-2 left-2 flex space-x-2">
+                        <button onclick="openEditModal('${node.id}')" class="action-btn rounded-full bg-blue-500 hover:bg-blue-600 text-white shadow-md p-2 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-300" title="编辑">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.389-8.379-2.83-2.828z" />
+                            </svg>
+                        </button>
+                        <button onclick="deleteNode('${node.id}')" class="action-btn rounded-full bg-red-500 hover:bg-red-600 text-white shadow-md p-2 transition-colors focus:outline-none focus:ring-2 focus:ring-red-300" title="删除">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    </div>`;
+                const html = `
+                    <div class="${alignmentClass} flex items-center mb-10">
+                        <div class="relative w-full">
+                            <div class="bg-white rounded-lg p-6 shadow-lg ${isEven ? 'ml-auto' : ''}">
+                                <div class="mb-2">
+                                    <h3 class="font-extrabold text-2xl text-gray-900 leading-tight">${node.nodeName}</h3>
+                                    <h4 class="font-semibold text-lg text-gray-800 mt-1" style="margin-left:0;">${node.title}</h4>
+                                </div>
+                                <div class="timeline-divider" style="background-color: ${node.color};"></div>
+                                <p class="mt-2 text-gray-600 text-left">${node.content}</p>
+                                ${actionBtnDiv}
+                            </div>
+                        </div>
+                        <div class="timeline-dot" style="border-color: ${node.color};">
+                            <img src="${node.image}" alt="Node Icon" style="width:140px;height:140px;object-fit:cover;border-radius:9999px;">
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += html;
             });
         }
 
-        function openAddEntryModal() {
-        // Always reset to 'add new' mode
-        modalEntryIndex = null;
-        const chartData = window.chart_data || [];
-        // 默认数据：可选，使用最新一条数据作为初始值，否则用默认值
-        let entry = null;
-        if (chartData.length > 0) {
-            entry = chartData[chartData.length - 1];
-        }
-        // 日期始终为今天
-        const today = new Date();
-        entryDateInput.value = today.toISOString().slice(0,10);
-        renderModalEntry(entry);
-        updateModalNavButtons();
-        addEntryModal.style.display = 'flex';
+        // --- CRUD Operations ---
+
+        // Add a new node
+        async function addNode(nodeData) {
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(nodeData)
+                });
+                if (!response.ok) {
+                    throw new Error('Failed to add node');
+                }
+                await fetchAndRenderNodes();
+            } catch (error) {
+                console.error("Error adding node:", error);
+            }
         }
 
-        function updateModalNavButtons() {
-            const chartData = window.chart_data || [];
-            const prevBtn = document.getElementById('prevEntryBtn');
-            const nextBtn = document.getElementById('nextEntryBtn');
-            // Always keep buttons in layout, just hide visually
-            if (!chartData.length || chartData.length === 1) {
-                prevBtn.style.visibility = 'hidden';
-                nextBtn.style.visibility = 'hidden';
+        // Update a node
+        async function updateNode(nodeId, nodeData) {
+            try {
+                const response = await fetch(`${API_URL}/${nodeId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(nodeData)
+                });
+                if (!response.ok) {
+                    throw new Error('Failed to update node');
+                }
+                await fetchAndRenderNodes();
+            } catch (error) {
+                console.error("Error updating node:", error);
+            }
+        }
+
+        // Delete a node
+        async function deleteNode(nodeId) {
+            if (!confirm('你确定要删除这个节点吗？')) {
                 return;
             }
-            if (modalEntryIndex === null || modalEntryIndex === chartData.length - 1) {
-                prevBtn.style.visibility = chartData.length > 1 ? 'visible' : 'hidden';
-                nextBtn.style.visibility = 'hidden';
-            } else if (modalEntryIndex === 0) {
-                prevBtn.style.visibility = 'hidden';
-                nextBtn.style.visibility = 'visible';
-            } else {
-                prevBtn.style.visibility = 'visible';
-                nextBtn.style.visibility = 'visible';
+            try {
+                const response = await fetch(`${API_URL}/${nodeId}`, {
+                    method: 'DELETE'
+                });
+                if (!response.ok) {
+                    throw new Error('Failed to delete node');
+                }
+                await fetchAndRenderNodes();
+            } catch (error) {
+                console.error("Error deleting node:", error);
             }
         }
 
-        document.addEventListener('DOMContentLoaded', function() {
-            const prevBtn = document.getElementById('prevEntryBtn');
-            const nextBtn = document.getElementById('nextEntryBtn');
-            prevBtn.addEventListener('click', function() {
-                const chartData = window.chart_data || [];
-                if (chartData.length < 2) return;
-                if (modalEntryIndex === null) {
-                    // Go to previous (second last)
-                    modalEntryIndex = chartData.length - 2;
-                } else if (modalEntryIndex > 0) {
-                    modalEntryIndex--;
-                }
-                const entry = chartData[modalEntryIndex];
-                // Set date input
-                if (entry && entry.date) {
-                    entryDateInput.value = formatDateYYYYMMDD(entry.date);
-                }
-                renderModalEntry(entry);
-                updateModalNavButtons();
-            });
-            nextBtn.addEventListener('click', function() {
-                const chartData = window.chart_data || [];
-                if (chartData.length < 2) return;
-                if (modalEntryIndex === null) return; // Already at latest
-                if (modalEntryIndex < chartData.length - 1) {
-                    modalEntryIndex++;
-                }
-                // If now at latest, set to null
-                if (modalEntryIndex === chartData.length - 1) {
-                    modalEntryIndex = null;
-                    const entry = chartData[chartData.length - 1];
-                    if (entry && entry.date) {
-                        entryDateInput.value = formatDateYYYYMMDD(entry.date);
-                    }
-                    renderModalEntry(entry);
-                } else {
-                    const entry = chartData[modalEntryIndex];
-                    if (entry && entry.date) {
-                        entryDateInput.value = formatDateYYYYMMDD(entry.date);
-                    }
-                    renderModalEntry(entry);
-                }
-                updateModalNavButtons();
-            });
-        });
-        function closeAddEntry() {
-            addEntryModal.style.display = 'none';
-        }
-        addEntryBtn.addEventListener('click', openAddEntryModal);
-        closeAddEntryModal.addEventListener('click', closeAddEntry);
-        addEntryModal.addEventListener('click', function(e) {
-            if (e.target === addEntryModal) closeAddEntry();
-        });
+        // --- Modal Handling ---
 
-        // Handle form submit
-        addEntryForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            // Get date in 'Mon DD' format
-            const dateVal = entryDateInput.value;
-            const dateObj = new Date(dateVal);
-            const month = dateObj.toLocaleString('en-US', { month: 'short' });
-            const day = dateObj.getDate();
-            const dateStr = `${month} ${day}`;
-            // Get values in current order
-            const values = {};
-            Array.from(modalElementList.children).forEach(li => {
-                const key = li.dataset.key;
-                const value = parseFloat(li.querySelector('.modal-element-value').textContent);
-                values[key] = value;
-            });
-            // Compose data
-            const data = { date: dateStr, ...values };
-            // Send to backend
-            fetch('/add_static_data', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            })
-            .then(resp => resp.json())
-            .then(resp => {
-                if (resp.success) {
-                    closeAddEntry();
-                    window.location.reload();
-                } else {
-                    alert('Failed to save: ' + (resp.error || 'Unknown error'));
-                }
-            })
-            .catch(() => alert('Failed to save.'));
-        });
-        // Placeholder for your Jinja2 variables.
-        // In a real Flask/Jinja2 app, these would be populated server-side.
-        const realtimeData = {{ realtime_data|tojson }} || [];
-        const chart_data = {{ chart_data|tojson }} || [];
-        window.chart_data = chart_data;
-
-        // Check if realtimeData is empty and hide the chart if true
-        if (!realtimeData || realtimeData.length === 0) {
-            const realtimeChartContainer = document.getElementById('realtimeChart').parentElement;
-            realtimeChartContainer.style.display = 'none';
+        function closeModal() {
+            document.querySelectorAll('.modal').forEach(modal => modal.classList.remove('active'));
+            editingNodeId = null;
         }
 
-        // Group realtimeData by hour and average PH/ORP for each hour
-        function getHour(ts) {
-            // Assumes ts format 'YYYY-MM-DD HH:MM:SS' or 'YYYY-MM-DD HH:MM:SS.000Z' (ISO String)
-            // We want 'YYYY-MM-DD HH:00'
-            if (!ts) return '';
-            let dateObj;
-            if (ts.endsWith('Z')) { // It's an ISO string (UTC), convert to local date for consistent hour extraction
-                dateObj = new Date(ts);
-            } else { // Assume it's a local time string or needs parsing
-                // For 'YYYY-MM-DD HH:MM:SS' or 'YYYY-MM-DD HH:MM', parse it directly.
-                // NOTE: Parsing date strings without Z or timezone can be problematic cross-browser.
-                // If 'time' from realtimeData is always a local time, this is okay.
-                // If it's mixed, consider parsing it as UTC first: new Date(ts + 'Z') or specific parsing library.
-                dateObj = new Date(ts.replace(' ', 'T')); // Convert to ISO-like format for safer parsing
+        function openAddModal() {
+            const modal = document.getElementById('node-modal');
+            document.getElementById('modal-title').textContent = '增加新节点';
+            document.getElementById('node-form').reset();
+            editingNodeId = null;
+            modal.classList.add('active');
+        }
+
+        async function openEditModal(nodeId) {
+            const modal = document.getElementById('node-modal');
+            const node = await getNodeData(nodeId);
+            if (!node) {
+                alert('该节点为示例数据，无法编辑。请先添加自己的节点。');
+                return;
             }
 
-            const year = dateObj.getFullYear();
-            const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
-            const day = dateObj.getDate().toString().padStart(2, '0');
-            const hour = dateObj.getHours().toString().padStart(2, '0');
+            document.getElementById('modal-title').textContent = '修改节点';
+            document.getElementById('nodeName').value = node.nodeName;
+            document.getElementById('title').value = node.title;
+            document.getElementById('content').value = node.content;
+            document.getElementById('color').value = node.color;
+            editingNodeId = nodeId;
 
-            return `${year}-${month}-${day} ${hour}:00`;
+            modal.classList.add('active');
         }
 
-        const hourMap = {};
-        realtimeData.forEach(d => {
-            const hour = getHour(d.time); // Use the corrected getHour
-            if (!hourMap[hour]) hourMap[hour] = { PH: [], ORP: [] };
-            if (typeof d.PH === 'number') hourMap[hour].PH.push(d.PH);
-            if (typeof d.ORP === 'number') hourMap[hour].ORP.push(d.ORP);
-        });
+        async function getNodeData(nodeId) {
+            try {
+                const response = await fetch(`${API_URL}/${nodeId}`);
+                if (!response.ok) {
+                    throw new Error('Node data not found');
+                }
+                return await response.json();
+            } catch (error) {
+                console.error(error);
+                return null;
+            }
+        }
 
-        // 获取最近10天所有30分钟点
-        function getRecentHalfHours(days) {
-            const result = [];
-            const now = new Date(); // Current local time
-            // Loop from oldest day (days-1) to current day (0)
-            for (let d = days - 1; d >= 0; d--) {
-                let date = new Date(now);
-                date.setDate(now.getDate() - d); // Set to the target day
-                
-                // Every 4 hours
-                for (let h = 0; h < 24; h = h + 2) {
-                    
-                    let dt = new Date(date); // Create new Date object for each time point
-                    dt.setHours(h, 0, 0, 0); // Set hour, minute, second, millisecond
+        function openHeaderModal() {
+            const modal = document.getElementById('header-modal');
+            document.getElementById('modal-main-title').value = document.getElementById('main-title').textContent;
+            document.getElementById('modal-subtitle').value = document.getElementById('subtitle').textContent;
+            modal.classList.add('active');
+        }
 
-                    // Only add if the generated time is not in the future
-                    if (dt <= now) {
-                        result.push(dt);
+        function openFooterModal() {
+            const modal = document.getElementById('footer-modal');
+            document.getElementById('modal-footer-text').value = document.getElementById('footer-text').textContent;
+            modal.classList.add('active');
+        }
+        
+        // --- Image Cropping and Handling ---
+
+        function cropImageAndGetBase64(file, callback) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    const size = 200; // 提高分辨率
+                    let sourceX = 0;
+                    let sourceY = 0;
+                    let sourceWidth = img.width;
+                    let sourceHeight = img.height;
+
+                    if (img.width > img.height) {
+                        sourceWidth = img.height;
+                        sourceX = (img.width - img.height) / 2;
                     } else {
-                        // If we've passed the current time, no need to generate further points for this day
-                        break; 
+                        sourceHeight = img.width;
+                        sourceY = (img.height - img.width) / 2;
                     }
-                    
-                }
-            }
-            return result;
-        }
 
-        const isMobile = window.matchMedia('(max-width: 768px)').matches;
-        const hourObjs = isMobile ? getRecentHalfHours(5) : getRecentHalfHours(10); // Adjusted for mobile devices
-        
-        // Formats labels for X-axis as 'Jul 28, 09' (24-hour)
-        function formatDateLabel(dt) {
-            const month = dt.toLocaleString(navigator.language, { month: 'short' });
-            const day = dt.getDate().toString().padStart(2, '0');
-            const hour = dt.getHours().toString().padStart(2, '0');
-            return `${month} ${day}, ${hour}`;
-        }
-        const dateLabels = hourObjs.map(formatDateLabel);
+                    canvas.width = size;
+                    canvas.height = size;
 
-        // findValueForHour function (already corrected in previous turn)
-        function findValueForHour(dt, key) {
-            // dt: Date object, key: 'PH' or 'ORP'
-            // target: 'YYYY-MM-DD HH:MM'
-
-            // Extract parts of the Date object in local timezone
-            const year = dt.getFullYear();
-            const month = (dt.getMonth() + 1).toString().padStart(2, '0'); // getMonth() is 0-indexed
-            const day = dt.getDate().toString().padStart(2, '0');
-            const hours = dt.getHours().toString().padStart(2, '0');
-
-            // This creates the exact format 'YYYY-MM-DD HH:MM' using local time values
-            const ymdhm = `${year}-${month}-${day} ${hours}`;
-
-            for (let i = 0; i < realtimeData.length; i++) {
-                const t = realtimeData[i].time;
-                // Check if realtimeData[i].time starts with our generated local time string
-                // Assuming realtimeData[i].time is also in local time or can be compared this way
-                if (t && t.startsWith(ymdhm)) {
-                    return typeof realtimeData[i][key] === 'number' ? realtimeData[i][key] : null;
-                }
-            }
-            return null; // Return null if no match is found
-        }
-        
-        const phHourValues = hourObjs.map(dt => findValueForHour(dt, 'PH'));
-        const orpHourValues = hourObjs.map(dt => findValueForHour(dt, 'ORP'));
-
-        const realtimeElem = document.getElementById('realtimeChart');
-        let lastLabel = ""; // Renamed from lastLabel to be more specific (lastDayLabel) for X-axis callback
-
-        // Unified color constants
-        const COLORS = {
-            ph: 'rgba(255, 159, 64, 0.24)',  // Orange
-            orp: 'rgba(54, 162, 235, 1)', // Blue
-            n: 'rgba(75, 192, 192, 1)',   // Teal
-            p: 'rgba(255, 99, 132, 1)',   // Red
-            ca: 'rgba(255, 206, 86, 1)',  // Yellow
-            mg: 'rgba(128, 128, 128, 0.12)', // Gray (changed from transparent for better visibility)
-            kh: 'rgba(153, 102, 255, 1)', // Purple
-            t: 'rgba(0, 200, 80, 1)',     // Green (used for temp, but not in current charts)
-        }; 
-
-        const skipped = (ctx, value) => ctx.p0.skip || ctx.p1.skip ? value : undefined;
-
-        const realtimeChart = new Chart(realtimeElem.getContext('2d'), {
-            type: 'line',
-            data: {
-                labels: dateLabels,
-                datasets: [
-                    {
-                        label: 'PH',
-                        data: phHourValues,
-                        borderColor: COLORS.ph,
-                        backgroundColor: COLORS.ph.replace('1)', '0.2)'), // Add transparency for fill color
-                        fill: true, // Enable area fill
-                        tension: 0.4,
-                        borderWidth: 2,
-                        pointRadius: 0,
-                        pointHoverRadius: 6,
-                        yAxisID: 'yLeft',
-                        spanGaps: true, // Connect null points
-                        segment: {
-                            borderColor: ctx => skipped(ctx, 'rgb(0,0,0,0.2)'),
-                            borderDash: ctx => skipped(ctx, [6, 6]),
-                        }
-                    },
-                    {
-                        label: 'ORP',
-                        data: orpHourValues,
-                        borderColor: COLORS.orp,
-                        backgroundColor: COLORS.orp.replace('1)', '0.1)'),
-                        fill: false, // Do not fill area for ORP
-                        tension: 0.4,
-                        borderWidth: 3,
-                        pointRadius: 0,
-                        pointHoverRadius: 6,
-                        yAxisID: 'yRight',
-                        spanGaps: true, // Connect null points
-                        segment: {
-                            borderColor: ctx => skipped(ctx, 'rgb(0,0,0,0.1)'),
-                            borderDash: ctx => skipped(ctx, [6, 6]),
-                        }
-                    }
-                ]
-            },   
-            options: {
-                responsive: true,
-                maintainAspectRatio: false, // Allow CSS to control height
-                interaction: {
-                    mode: 'nearest',
-                    axis: 'xy',
-                    intersect: false
-                },
-                scales: {
-                    x: {
-                        ticks: {
-                            font: {
-                                family: 'Oswald',
-                                size: 12
-                            },
-                            autoSkip: false, // We control skipping manually
-                            callback: function(value, index, ticks) {
-                                // Get the full label string (e.g., "Jul 27, 04:00 AM")
-                                const fullLabel = this.getLabelForValue(value);
-
-                                const datePart = fullLabel.split(',')[0];
-                                // console.log("datePart: " + datePart);
-                                // Only display label if it's 12 AM (midnight) for a new day
-                                if (fullLabel.includes('00')) {
-                                    return datePart;
-                                } 
-                                return ''; // Hide other labels
-                            }
-                        },
-                        grid: {
-                            drawTicks: false,
-                            drawOnChartArea: true,
-                            drawBorder: true,
-                            color: 'rgba(180,180,180,0.1)'
-                        }
-                    },
-                    yLeft: {
-                        type: 'linear',
-                        position: 'left',
-                        beginAtZero: false,
-                        // Calculate suggestedMax based on actual filtered values
-                        suggestedMax: phHourValues.filter(v => v !== null).length > 0 ? 
-                                      1.1 * Math.max(...phHourValues.filter(v => v !== null)) : 10,
-                        ticks: {
-                            font: {
-                                family: 'Oswald',
-                                size: 14
-                            }
-                        },
-                        grid: {
-                            color: 'rgba(180,180,180,0.12)'
-                        }
-                    },
-                    yRight: {
-                        type: 'linear',
-                        position: 'right',
-                        beginAtZero: false,
-                        // Calculate suggestedMax based on actual filtered values
-                        suggestedMax: orpHourValues.filter(v => v !== null).length > 0 ?
-                                      1.002 * Math.max(...orpHourValues.filter(v => v !== null)) : 500,
-                        ticks: {
-                            font: {
-                                family: 'Oswald',
-                                size: 14
-                            },
-                            callback: function(value) {
-                                return value.toFixed(0); // Show ORP as whole numbers
-                            }
-                        },
-                        grid: {
-                            drawOnChartArea: false // Hide horizontal grid lines for right Y-axis
-                        }
-                    }
-                },
-                plugins: {
-                    title: {
-                        display: false,
-                        text: 'Real Time Tracking',
-                        font: { family: 'Oswald', size: 14 },
-                        align: 'top'
-                    },
-                    legend: {
-                        display: true,
-                        position: 'top'
-                    },
-                    tooltip: {
-                        enabled: true,
-                        mode: 'nearest',
-                        intersect: true,
-                        bodyFont: { family: 'Oswald', size: 14 },
-                        callbacks: {
-                            title: function(context) {
-                                // context[0] is the hovered item
-                                const idx = context[0].dataIndex;
-                                const dt = hourObjs[idx]; // Get the original Date object
-                                
-                                if (dt instanceof Date) {
-                                    // Use toLocaleString for a user-friendly timestamp in their locale
-                                    return dt.toLocaleString(navigator.language, { 
-                                        month: 'short', 
-                                        day: 'numeric', 
-                                        hour: '2-digit', 
-                                        minute: '2-digit', 
-                                        hour12: true 
-                                    });
-                                }
-                                return '';
-                            },
-                            label: function(context) {
-                                const key = context.dataset.label;
-                                const value = context.parsed.y;
-                                let formattedValue = 'N/A';
-
-                                if (value !== null) {
-                                    switch (key) {
-                                        case 'ORP':
-                                            formattedValue = value.toFixed(0);
-                                            break;
-                                        case 'PH':
-                                            formattedValue = value.toFixed(1);
-                                            break;
-                                        default:
-                                            formattedValue = value.toFixed(0);
-                                    }
-                                }
-
-                                return `${key}: ${formattedValue}`;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-
-        const rawData = {{ chart_data|tojson }} || [];
-        const chartElem = document.getElementById('staticChartLeft');
-        const chartRightElem = document.getElementById('staticChartRight');
-        
-        const ctx = chartElem.getContext('2d');
-        const ctxRight = chartRightElem.getContext('2d');
-
-        const colorPalette = [
-            COLORS.n, // Nitrate (Teal)
-            COLORS.p, // Phosphate (Red)
-            COLORS.ca, // Calcium (Yellow)
-            COLORS.mg, // Magnesium (Gray)
-            COLORS.kh, // Alkalinity (Purple)
-        ];
-
-        // Helper to get week start from date string (assumes format like "Mon DD" or 'YYYY-MM-DD')
-        // We'll try to parse it more robustly
-        function getWeekStart(dateStr) {
-            // First, try to parse as ISO-like, then get the date
-            let d;
-            if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) { // YYYY-MM-DD format
-                d = new Date(dateStr + 'T00:00:00'); // Ensure it's treated as a local date
-            } else { // Assume it's "Mon DD"
-                d = new Date(dateStr + ', ' + new Date().getFullYear()); // Add current year for parsing
-            }
-
-            // Find Monday (week start)
-            const dayOfWeek = d.getDay(); // 0 for Sunday, 1 for Monday, ..., 6 for Saturday
-            const diffToMonday = d.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-            const monday = new Date(d);
-            monday.setDate(diffToMonday);
-
-            // Find Sunday (week end) for label: Monday + 6 days
-            const sunday = new Date(monday);
-            sunday.setDate(monday.getDate() + 6);
-
-            // Format to "Mon DD" for labels (will show Sunday date)
-            return sunday.toLocaleDateString(navigator.language, { month: 'short', day: 'numeric' });
-        }
-
-        // Group all entries by week
-        const weekMap = {};
-        rawData.forEach(d => {
-            const week = getWeekStart(d.date);
-            if (!weekMap[week]) weekMap[week] = {};
-            ['N','P','CA','MG','KH'].forEach(key => {
-                if (typeof d[key] === 'number') { // Only push if it's a number
-                    if (!weekMap[week][key]) weekMap[week][key] = [];
-                    weekMap[week][key].push(d[key]);
-                }
-            });
-        });
-
-        // Aggregate values for each week (average)
-        function avg(arr) {
-            if (!arr || arr.length === 0) return null;
-            return parseFloat((arr.reduce((a,b) => a+b,0) / arr.length).toFixed(2));
-        }
-
-        const labels = Object.keys(weekMap).sort((a,b) => {
-            // Custom sort for "Mon DD" format
-            const dateA = new Date(a + ', ' + new Date().getFullYear());
-            const dateB = new Date(b + ', ' + new Date().getFullYear());
-            return dateA - dateB;
-        });
-
-        const elementKeysLeft = ['N', 'P']; // Left Chart Elements
-        const elementDataLeft = {};  
-        elementKeysLeft.forEach(key => {
-            elementDataLeft[key] = labels.map(week => {
-                const arr = weekMap[week][key];
-                return arr ? avg(arr) : null;
-            });
-        });
-
-        const elementKeysRight = ['CA', 'MG', 'KH']; // Right Chart Elements
-        const elementDataRight = {};
-        elementKeysRight.forEach(key => {
-            elementDataRight[key] = labels.map(week => {
-                const arr = weekMap[week][key];
-                return arr ? avg(arr) : null;
-            });
-        });
-
-        // Assign yAxisID: No3 on left, Po4 on right for the left chart
-        function getAxisLeftChart(key) {
-            return key === 'N' ? 'yLeft' : 'yRight';
-        }
-        const datasetsLeft = elementKeysLeft.map((key, idx) => ({
-            label: key === 'N' ? 'Nitrate' : 'Phosphate', // Assuming only N and P here
-            data: elementDataLeft[key],
-            borderColor: COLORS[key.toLowerCase()], // Use predefined colors
-            backgroundColor: COLORS[key.toLowerCase()].replace('1)', '0.2)'),
-            fill: true,
-            tension: 0.4,
-            borderWidth: 2,
-            pointRadius: 0,
-            pointHoverRadius: 6,
-            yAxisID: getAxisLeftChart(key),
-            spanGaps: true,
-            segment: {
-                borderColor: ctx => skipped(ctx, 'rgb(0,0,0,0.2)'),
-                borderDash: ctx => skipped(ctx, [6, 6]),
-            }
-        }));
-
-        // Right chart: CA and MG as stacked bars, KH as line
-        function getAxisRightChart(key) {
-            // CA and MG might share one axis (right), KH on another (left)
-            return key === 'KH' ? 'yLeft' : 'yRight';
-        }
-        const datasetsRight = elementKeysRight.map((key, idx) => {
-            const baseColor = colorPalette[(idx + 2) % colorPalette.length]; // Re-use color palette or define more
-            if (key === 'MG' || key === 'CA') {
-                return {
-                    label: key === 'MG' ? 'Magnesium' : 'Calcium',
-                    data: elementDataRight[key],
-                    backgroundColor: COLORS[key.toLowerCase()],
-                    type: 'bar',
-                    stack: 'elementsStack', // All bars that should stack use the same stack ID
-                    yAxisID: getAxisRightChart(key),
-                    order: 1,
-                    segment: {
-                        borderColor: ctx => skipped(ctx, 'rgb(0,0,0,0.2)'),
-                        borderDash: ctx => skipped(ctx, [6, 6]),
-                    }
+                    ctx.drawImage(img, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, size, size);
+                    callback(canvas.toDataURL('image/png'));
                 };
-            } else { // KH
-                return {
-                    label: 'Alk', // Label for KH
-                    data: elementDataRight[key],
-                    borderColor: COLORS.kh,
-                    backgroundColor: COLORS.kh.replace('1)', '0.2)'),
-                    fill: false,
-                    type: 'line',
-                    tension: 0.4,
-                    borderWidth: 2,
-                    pointRadius: 0,
-                    pointHoverRadius: 6,
-                    yAxisID: getAxisRightChart(key),
-                    spanGaps: true,
-                    order: 0,
-                    segment: {
-                        borderColor: ctx => skipped(ctx, 'rgb(0,0,0,0.2)'),
-                        borderDash: ctx => skipped(ctx, [6, 6]),
-                    }
-                };
-            }
-        });
-
-        const myChartLeft = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: datasetsLeft
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false, // Allow CSS to control height
-                scales: {
-                    x: {
-                        ticks: {
-                            font: { family: 'Oswald', size: 13 },
-                            // Improve X-axis label display for weeks
-                            callback: function(value, index, ticks) {
-                                // Only display every X labels if too many, or always if few
-                                return this.getLabelForValue(value);
-                            }
-                        },
-                        grid: {
-                            drawTicks: false,
-                            drawOnChartArea: true,
-                            drawBorder: true,
-                            color: 'rgba(180,180,180,0.12)'
-                        }
-                    },
-                    yLeft: {
-                        type: 'linear',
-                        position: 'left',
-                        beginAtZero: true,
-                        suggestedMax: elementDataLeft['N'].filter(v => v !== null).length > 0 ? 
-                                      1.3 * Math.max(...elementDataLeft['N'].filter(v => v !== null)) : 10,
-                        ticks: { font: { family: 'Oswald', size: 14 } },
-                        grid: { color: 'rgba(180,180,180,0.12)' }
-                    },
-                    yRight: {
-                        type: 'linear',
-                        position: 'right',
-                        beginAtZero: true,
-                        suggestedMax: elementDataLeft['P'].filter(v => v !== null).length > 0 ? 
-                                      1.1 * Math.max(...elementDataLeft['P'].filter(v => v !== null)) : 0.2,
-                        ticks: { font: { family: 'Oswald', size: 14 } },
-                        grid: { drawOnChartArea: false }
-                    }
-                },
-                interaction: { mode: 'nearest', axis: 'xy', intersect: false },
-                plugins: {
-                    title: { display: false, text: 'Nutrition', font: { family: 'Oswald', size: 14 }, align: 'start' },
-                    legend: { display: true, position: 'top'},
-                    tooltip: {
-                        enabled: true, mode: 'nearest', intersect: true, bodyFont: { family: 'Oswald', size: 14 },
-                        callbacks: {
-                            label: function(context) {
-                                const key = context.dataset.label === 'Nitrate' ? 'N' : 'P';
-                                const value = context.parsed.y;
-                                let formattedValue = 'N/A';
-
-                                if (value !== null) {
-                                    switch (key) {
-                                        case 'Nitrate': // N
-                                            formattedValue = value.toFixed(1);
-                                            break;
-                                        case 'Phosphate': // P
-                                            formattedValue = value.toFixed(2);
-                                            break;
-                                        default:
-                                            formattedValue = value.toString();
-                                    }
-                                }
-
-                                return `${context.dataset.label}: ${formattedValue}`;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-
-        // Right chart
-        const myChartRight = new Chart(ctxRight, {
-            type: 'bar', // Default type for this chart
-            data: {
-                labels: labels,
-                datasets: datasetsRight
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false, // Allow CSS to control height
-                scales: {
-                    x: {
-                        stacked: true, // Enable stacking for bars on x-axis
-                        ticks: { font: { family: 'Oswald', size: 13 } },
-                        grid: { drawTicks: false, drawOnChartArea: true, drawBorder: true, color: 'rgba(180,180,180,0.12)' }
-                    },
-                    yLeft: { // For KH (Alk)
-                        type: 'linear',
-                        position: 'left',
-                        beginAtZero: false, // Alk might not start at zero
-                        suggestedMax: elementDataRight['KH'].filter(v => v !== null).length > 0 ? 
-                                      1.05 * Math.max(...elementDataRight['KH'].filter(v => v !== null)) : 10,
-                        ticks: { font: { family: 'Oswald', size: 14 } },
-                        grid: { color: 'rgba(180,180,180,0.12)' }
-                    },
-                    yRight: { // For CA, MG (stacked bars)
-                        type: 'linear',
-                        position: 'right',
-                        beginAtZero: true,
-                        stacked: false, // y-axis itself is not stacked, individual datasets are
-                        suggestedMax: Math.max(
-                            elementDataRight['CA'].filter(v => v !== null).length > 0 ? Math.max(...elementDataRight['CA'].filter(v => v !== null)) : 0,
-                            elementDataRight['MG'].filter(v => v !== null).length > 0 ? Math.max(...elementDataRight['MG'].filter(v => v !== null)) : 0
-                        ) * 1.1, // Adjusted max for stacked bars
-                        ticks: { font: { family: 'Oswald', size: 14 } },
-                        grid: { drawOnChartArea: false }
-                    }
-                },
-                interaction: { mode: 'nearest', axis: 'xy', intersect: false },
-                plugins: {
-                    title: { display: false, text: 'Huge Elements', font: { family: 'Oswald', size: 14 }, align: 'top' },
-                    legend: { display: true, position: 'top' },
-                    tooltip: {
-                        enabled: true, mode: 'nearest', intersect: true, bodyFont: { family: 'Oswald', size: 14 },
-                        filter: function(tooltipItem, data) {
-                            // Only show tooltip for the line dataset (assuming it's datasetIndex 0)
-                            return tooltipItem.datasetIndex === 2; 
-                        },
-                        callbacks: {
-                            label: function(context) {
-                                // Map label to original key
-                                const labelMap = { 'Calcium': 'CA', 'Magnesium': 'MG', 'Alk': 'KH' };
-                                const key = labelMap[context.dataset.label] || context.dataset.label;
-                                const value = context.parsed.y;
-                                let formattedValue = 'N/A';
-
-                                if (value !== null) {
-                                    switch (key) {
-                                        case 'Calcium': // CA
-                                            formattedValue = value.toFixed(0);
-                                            break;
-                                        case 'Magnesium': // MG
-                                            formattedValue = value.toFixed(0);
-                                            break;
-                                        case 'Alk': // KH
-                                            formattedValue = value.toFixed(1);
-                                            break;
-                                        default:
-                                            formattedValue = value.toString();
-                                    }
-                                }
-
-                                return `${context.dataset.label}: ${formattedValue}`;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-
-        // Dynamically update element values for the elements list
-        const elements = {
-            nElement: 'N',
-            pElement: 'P',
-            caElement: 'CA',
-            mgElement: 'MG',
-            khElement: 'KH'
-        };
-
-        // Get latest week label
-        const latestWeek = labels.length > 0 ? labels[labels.length - 1] : null;
-        // Helper to get latest value from weekMap for a key
-        function getLatestWeekValue(key) {
-            if (!latestWeek || !weekMap[latestWeek] || !weekMap[latestWeek][key]) return null;
-            const arr = weekMap[latestWeek][key];
-            if (!arr || arr.length === 0) return null;
-            // Use the last value in the array for the week
-            return arr[arr.length - 1];
-        }
-        // Helper to get latest value from realtimeData for a key
-        function getLatestRealtimeValue(key) {
-            for (let i = 0; i < realtimeData.length; i++) {
-                const v = realtimeData[i][key];
-                if (v !== undefined && v !== null) return v;
-            }
-            return null;
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
         }
 
-        // Update values in the elements list
-        Object.keys(elements).forEach(id => {
-            const element = document.getElementById(id);
-            const key = elements[id];
-            let value = '-';
+        // --- Event Listeners ---
 
-            if (["N","P","CA","MG","KH"].includes(key)) {
-                const v = getLatestWeekValue(key);
-                value = v !== null && v !== undefined ? v : '-';
-            }
-
-            if (element) {
-                element.querySelector('span').textContent += value;
-            }
-        });
-
-        // --- Update Elements List with Data ---
-        // Define max values for percentage calculation
-        // 统一获取最佳值
-        function getBestValue(key) {
-            return ELEMENTS_CONFIG[key] ? ELEMENTS_CONFIG[key].best : null;
-        }
-        // 统一获取最大值
-        function getMaxValue(key) {
-            return ELEMENTS_CONFIG[key] ? ELEMENTS_CONFIG[key].max : null;
-        }
-        // 统一获取最小值
-        function getMinValue(key) {
-            return ELEMENTS_CONFIG[key] ? ELEMENTS_CONFIG[key].min : null;
-        }
-        // 统一获取小数位
-        function getDecimals(key) {
-            return ELEMENTS_CONFIG[key] ? ELEMENTS_CONFIG[key].decimals : 0;
-        }
-
-        // 百分比颜色统一函数
-        function getPercentageColor(per_show) {
-            // New: color based on min, best, max
-            // Usage: getPercentageColor(value, min, best, max)
-            if (arguments.length < 4) return '#22c55e'; // fallback if not enough args
-            const value = arguments[0];
-            const min = arguments[1];
-            const best = arguments[2];
-            const max = arguments[3];
-            if (min === max) return '#22c55e';
-            if (value <= best) {
-                const range = best - min;
-                if (range === 0) return '#22c55e';
-                const gap = best - value;
-                const percent = gap / range;
-
-                if (percent < 0.2) {
-                    return '#22c55e'; // green
-                } else if (percent < 0.6) {
-                    return '#3b82f6'; // blue
-                } else {
-                    return '#a259e6'; // purple
-                }
-            } else {
-                const range = max - best;
-                if (range === 0) return '#22c55e';
-                const gap = value - best;
-                const percent = gap / range;
-
-                if (percent < 0.2) {
-                    return '#22c55e'; // green
-                } else if (percent < 0.6) {
-                    return '#facc15'; // yellow
-                } else {
-                    return '#ef4444'; // red
-                }
-            }
-        }
-
-        function updateElementsList() {
-            // Get the latest data for PH, ORP, Temp from realtimeData
-            const latestRealtimeData = realtimeData.length > 0 ? realtimeData[0] : null;
-
-            // Get the latest averaged data for N, P, CA, MG, KH from chart_data (weekly average)
-            // This is a simplification; ideally, you'd have a separate "latest" data source for these.
-            // For now, we'll use the last week's average from chart_data.
-            const latestWeeklyData = labels.length > 0 ? rawData.find(d => getWeekStart(d.date) === labels[labels.length - 1]) : null;
-
-            const elementsToUpdate = {
-                N: { id: 'nElement', name: 'Nitrate (N):', value: latestWeeklyData ? latestWeeklyData.N : null, decimals: ELEMENTS_CONFIG.N.decimals },
-                P: { id: 'pElement', value: latestWeeklyData ? latestWeeklyData.P : null, decimals: ELEMENTS_CONFIG.P.decimals },
-                CA: { id: 'caElement', value: latestWeeklyData ? latestWeeklyData.CA : null, decimals: ELEMENTS_CONFIG.CA.decimals },
-                MG: { id: 'mgElement', value: latestWeeklyData ? latestWeeklyData.MG : null, decimals: ELEMENTS_CONFIG.MG.decimals },
-                KH: { id: 'khElement', value: latestWeeklyData ? latestWeeklyData.KH : null, decimals: ELEMENTS_CONFIG.KH.decimals }
+        // Handle form submission for adding/editing nodes
+        document.getElementById('node-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const nodeData = {
+                nodeName: formData.get('nodeName'),
+                title: formData.get('title'),
+                content: formData.get('content'),
+                color: formData.get('color'),
+                image: "https://placehold.co/100x100" // Default image placeholder
             };
 
-            const BAR_FULL_AT = 0.7; // 70% of best is 100% for the bar
-            for (const key in elementsToUpdate) {
-                const elementInfo = elementsToUpdate[key];
-                const listItem = document.getElementById(elementInfo.id);
-                if (listItem) {
-                    const percentageSpan = listItem.querySelector('.element-percentage');
-                    const progressBarFill = listItem.querySelector('.progress-bar-fill');
-                    const progressBarContainer = listItem.querySelector('.progress-bar-container');
-                    const thresholdBar = listItem.querySelector('.progress-bar-threshold');
-                    const value = elementInfo.value;
-                    const minValue = getMinValue(key);
-                    const maxValue = getMaxValue(key);
-                    const bestValue = getBestValue(key);
-
-                    // Set threshold marker at best value
-                    if (thresholdBar) {
-                        const bestPercent = ((bestValue - minValue) / (maxValue - minValue)) * 100;
-                        thresholdBar.style.left = bestPercent + '%';
-                        thresholdBar.style.opacity = '0.7';
-                    }
-
-                    if (value !== null && typeof value === 'number' && bestValue) {
-                        let per_show = (value / bestValue) * 100;
-                        // Progress bar fill: left=min, right=max
-                        let percentage = ((value - minValue) / (maxValue - minValue)) * 100;
-                        percentageSpan.textContent = `${per_show.toFixed(0)}%`;
-                        progressBarFill.style.width = `${percentage}%`;
-                        progressBarFill.style.backgroundColor = COLORS[key.toLowerCase()];
-                        percentageSpan.style.color = getPercentageColor(value, minValue, bestValue, maxValue);
+            const imageFile = formData.get('imageUpload');
+            if (imageFile && imageFile.size > 0) {
+                cropImageAndGetBase64(imageFile, async (base64Image) => {
+                    nodeData.image = base64Image;
+                    if (editingNodeId) {
+                        await updateNode(editingNodeId, nodeData);
                     } else {
-                        percentageSpan.textContent = 'N/A';
-                        percentageSpan.style.color = '#333';
-                        progressBarFill.style.width = '0%';
-                        progressBarFill.style.backgroundColor = '#e0e0e0';
+                        await addNode(nodeData);
                     }
+                    closeModal();
+                });
+            } else {
+                if (editingNodeId) {
+                    // If no new image, try to keep the existing one
+                    const existingNode = await getNodeData(editingNodeId);
+                    if (existingNode) {
+                         nodeData.image = existingNode.image;
+                    }
+                    await updateNode(editingNodeId, nodeData);
+                } else {
+                    await addNode(nodeData);
                 }
+                closeModal();
             }
-        }
+        });
 
-        // Call update function after charts are initialized or data is loaded
-        updateElementsList();
+        // Handle form submission for editing header
+        document.getElementById('header-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const mainTitle = document.getElementById('modal-main-title').value;
+            const subtitle = document.getElementById('modal-subtitle').value;
+            try {
+                await fetch('/api/header_footer', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        header: { main_title: mainTitle, subtitle: subtitle }
+                    })
+                });
+                await fetchAndRenderHeaderFooter();
+            } catch (err) { /* ignore */ }
+            closeModal();
+        });
+
+        // Handle form submission for editing footer
+        document.getElementById('footer-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const footerText = document.getElementById('modal-footer-text').value;
+            try {
+                await fetch('/api/header_footer', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        footer: { footer_text: footerText }
+                    })
+                });
+                await fetchAndRenderHeaderFooter();
+            } catch (err) { /* ignore */ }
+            closeModal();
+        });
+        
+        // Initial fetch on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchAndRenderHeaderFooter();
+            fetchAndRenderNodes();
+        });
     </script>
+
 </body>
 </html>
