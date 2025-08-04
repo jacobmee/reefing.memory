@@ -103,15 +103,9 @@
             right: 20px;
             transform: translateY(-50%) translateX(30%);
         }
-        .timeline-item.is-left .bg-white {
-            margin-right: 40px;
-        }
         .timeline-item.is-right .timeline-dot {
             left: 20px;
             transform: translateY(-50%) translateX(-30%);
-        }
-        .timeline-item.is-right .bg-white {
-            margin-left: 40px;
         }
         .timeline-divider {
             height: 4px;
@@ -210,10 +204,6 @@
         <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md">
             <h2 id="modal-title" class="text-2xl font-bold mb-4">增加新节点</h2>
             <form id="node-form" class="space-y-4">
-                <div>
-                    <label for="nodeName" class="block text-sm font-medium text-gray-700">节点名 (如: Week 1)</label>
-                    <input type="text" id="nodeName" name="nodeName" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" required>
-                </div>
                 <div>
                     <label for="title" class="block text-sm font-medium text-gray-700">标题 (如: Initial Consult)</label>
                     <input type="text" id="title" name="title" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" required>
@@ -360,10 +350,12 @@
         // Render the timeline UI
         function renderTimeline(nodes) {
             const container = document.getElementById('timeline-container');
-            // Find the SVG element and clear the container content without removing the SVG
+            // Find the SVG element and the center line, and clear the container content without removing them
             const svgElement = document.getElementById('timeline-connector-svg');
+            const centerLine = document.querySelector('.timeline-center-line');
             container.innerHTML = '';
-            container.appendChild(svgElement);
+            if (centerLine) container.appendChild(centerLine);
+            if (svgElement) container.appendChild(svgElement);
 
 
             nodes.forEach((node, index) => {
@@ -397,12 +389,11 @@
                     </div>`;
 
                 const html = `
-                    <div class="${alignmentClass} flex items-center mb-10" id="node-${node.id}">
+                    <div class="${alignmentClass} flex items-center" id="node-${node.id}">
                         <div class="relative w-full">
                             <div class="bg-white rounded-lg p-6 shadow-lg">
                                 <div class="mb-2">
-                                    <h3 class="font-extrabold text-2xl text-gray-900 leading-tight">${node.nodeName}</h3>
-                                    <h4 class="font-semibold text-lg text-gray-800 mt-1" style="margin-left:0;">${node.title}</h4>
+                                    <span class="font-semibold text-lg text-gray-800">${node.title}</span>
                                 </div>
                                 <div class="timeline-divider" style="background-color: ${node.color};"></div>
                                 <p class="mt-2 text-gray-600 text-left">${node.content}</p>
@@ -608,7 +599,6 @@
             }
 
             document.getElementById('modal-title').textContent = '修改节点';
-            document.getElementById('nodeName').value = node.nodeName;
             document.getElementById('title').value = node.title;
             document.getElementById('content').value = node.content;
             document.getElementById('color').value = node.color;
@@ -692,7 +682,6 @@
             e.preventDefault();
             const formData = new FormData(e.target);
             const nodeData = {
-                nodeName: formData.get('nodeName'),
                 title: formData.get('title'),
                 content: formData.get('content'),
                 color: formData.get('color'),
