@@ -56,7 +56,9 @@ timeline_nodes = load_timeline_nodes()
 def get_nodes():
     global timeline_nodes
     timeline_nodes = load_timeline_nodes()
-    return jsonify(list(timeline_nodes.values()))
+    # Sort by insertion order, latest first (assuming dict preserves order)
+    nodes_list = list(timeline_nodes.values())[::-1]
+    return jsonify(nodes_list)
 
 
 # API endpoint to add a new timeline node

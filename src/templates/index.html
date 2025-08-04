@@ -4,19 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>项目时间线</title>
-    <!-- 引入 Tailwind CSS -->
+    <!-- Include Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @media (max-width: 640px) and (orientation: portrait) {
+        /* 媒体查询：当屏幕宽度小于640px时应用缩放 */
+        @media (max-width: 640px) {
             body {
-                transform: scale(0.5);
+                /* 将整个页面的内容缩放到50% */
+                transform: scale(0.4);
+                /* 确保缩放从左上角开始，而不是中心 */
                 transform-origin: top left;
-                width: 200vw;
-                height: 200vh;
-                overflow-x: auto;
+                /* 调整页面的尺寸以容纳被缩放的内容，并启用滚动 */
+                width: 260vw;
+                height: 20vh;
+                overflow-x: auto; /* 允许水平滚动 */
             }
         }
-        /* 操作按钮默认隐藏，仅在父区域 hover 时显示 */
+
         .action-btn, .header-action-btn, .footer-action-btn, #add-node-button {
             opacity: 0;
             pointer-events: none;
@@ -27,19 +31,19 @@
             opacity: 1;
             pointer-events: auto;
         }
-        /* header-action-btn: show when header-content's parent hovered or button hovered */
+        /* Header action button visibility on hover */
         .container:hover > .header-action-btn,
         .header-action-btn:hover {
             opacity: 1;
             pointer-events: auto;
         }
-        /* footer-action-btn: show when container or button hovered */
+        /* Footer action button visibility on hover */
         footer .container:hover .footer-action-btn,
         .footer-action-btn:hover {
             opacity: 1;
             pointer-events: auto;
         }
-        /* add-node-button: show when flex container or button hovered */
+        /* Add node button visibility on hover */
         .flex.justify-center:hover #add-node-button,
         #add-node-button:hover {
             opacity: 1;
@@ -49,33 +53,40 @@
             font-family: 'Inter', sans-serif;
             background-color: #f3f4f6;
         }
-        /* 时间线样式 */
+        /* Header font size smaller */
+        #main-title {
+            font-size: 1.6rem !important;
+        }
+        #subtitle {
+            font-size: 1rem !important;
+        }
+        /* Timeline styles */
         .timeline {
             position: relative;
+            overflow: visible !important;
         }
         .timeline-item {
             position: relative;
             padding: 1rem 0;
             width: 50%;
+            z-index: 2; /* Ensure timeline items are above the connector lines */
         }
-        .timeline-item:nth-child(even) {
+        .timeline-item.is-right {
             margin-left: 50%;
-            padding-left: 5.5rem; /* 增大内容和图片的间距 */
+            padding-left: 5.5rem;
             text-align: left;
-            /* 向左移动10% */
             transform: translateX(10%);
         }
-        .timeline-item:nth-child(odd) {
+        .timeline-item.is-left {
             margin-right: 50%;
-            padding-right: 5.5rem; /* 增大内容和图片的间距 */
+            padding-right: 5.5rem;
             text-align: right;
-            /* 向右移动10% */
             transform: translateX(-10%);
         }
         .timeline-dot {
             position: absolute;
-            width: 150px;
-            height: 150px;
+            width: 120px;
+            height: 120px;
             border-radius: 50%;
             top: 50%;
             transform: translateY(-50%);
@@ -88,31 +99,19 @@
             border: 4px solid;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
-        .timeline-item:nth-child(odd) .timeline-dot {
+        .timeline-item.is-left .timeline-dot {
             right: 20px;
-            /* 文字在右，整体右移30% */
             transform: translateY(-50%) translateX(30%);
         }
-        .timeline-item:nth-child(odd) .bg-white {
-            margin-right: 70px;
+        .timeline-item.is-left .bg-white {
+            margin-right: 40px;
         }
-        .timeline-item:nth-child(even) .timeline-dot {
+        .timeline-item.is-right .timeline-dot {
             left: 20px;
-            /* 文字在左，整体左移30% */
             transform: translateY(-50%) translateX(-30%);
         }
-        .timeline-item:nth-child(even) .bg-white {
-            margin-left: 70px;
-        }
-        .timeline-item:nth-child(odd) .timeline-dot {
-            right: 20px;
-            /* 文字在右，整体右移70% */
-            transform: translateY(-50%) translateX(30%);
-        }
-        .timeline-item:nth-child(even) .timeline-dot {
-            left: 20px;
-            /* 文字在左，整体左移70% */
-            transform: translateY(-50%) translateX(-30%);
+        .timeline-item.is-right .bg-white {
+            margin-left: 40px;
         }
         .timeline-divider {
             height: 4px;
@@ -129,6 +128,32 @@
             justify-content: center;
         }
         .modal.active {
+            display: flex;
+        }
+        /* SVG connector line styles */
+        .timeline-connector {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw !important;
+            min-width: 100vw !important;
+            height: 100%;
+            min-height: 100%;
+            pointer-events: none;
+            overflow: visible;
+            z-index: 1; /* Ensure connectors are behind the timeline items */
+        }
+        /* Custom confirmation modal styles */
+        #confirm-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 50;
+            background: rgba(0,0,0,0.5);
+            align-items: center;
+            justify-content: center;
+        }
+        #confirm-modal.active {
             display: flex;
         }
     </style>
@@ -160,6 +185,8 @@
             </button>
         </div>
         <div id="timeline-container" class="timeline relative max-w-4xl mx-auto mt-12">
+            <!-- SVG container for drawing the connector lines -->
+            <svg id="timeline-connector-svg" class="timeline-connector"></svg>
             <!-- Timeline items will be rendered here by JavaScript -->
         </div>
     </main>
@@ -204,7 +231,7 @@
                     <input type="file" id="imageUpload" name="imageUpload" accept="image/*" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
                 </div>
                 <div class="flex justify-end space-x-2">
-                    <button type="button" onclick="closeModal()" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">取消</button>
+                    <button type="button" onclick="closeModal('node-modal')" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">取消</button>
                     <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">保存</button>
                 </div>
             </form>
@@ -225,7 +252,7 @@
                     <input type="text" id="modal-subtitle" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2">
                 </div>
                 <div class="flex justify-end space-x-2">
-                    <button type="button" onclick="closeModal()" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">取消</button>
+                    <button type="button" onclick="closeModal('header-modal')" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">取消</button>
                     <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">保存</button>
                 </div>
             </form>
@@ -242,29 +269,71 @@
                     <input type="text" id="modal-footer-text" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2">
                 </div>
                 <div class="flex justify-end space-x-2">
-                    <button type="button" onclick="closeModal()" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">取消</button>
+                    <button type="button" onclick="closeModal('footer-modal')" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">取消</button>
                     <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">保存</button>
                 </div>
             </form>
         </div>
     </div>
 
+    <!-- Custom Confirmation Modal -->
+    <div id="confirm-modal" class="modal">
+        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm">
+            <h2 id="confirm-title" class="text-xl font-bold mb-4">确认</h2>
+            <p id="confirm-message" class="mb-6 text-gray-700">你确定要执行此操作吗？</p>
+            <div class="flex justify-end space-x-2">
+                <button type="button" id="confirm-cancel" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">取消</button>
+                <button type="button" id="confirm-ok" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">确定</button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        // 动态加载header/footer内容
-        async function fetchAndRenderHeaderFooter() {
-            try {
-                const response = await fetch('/api/header_footer');
-                if (!response.ok) return;
-                const data = await response.json();
-                if (data.header) {
-                    document.getElementById('main-title').textContent = data.header.main_title || '';
-                    document.getElementById('subtitle').textContent = data.header.subtitle || '';
-                }
-                if (data.footer) {
-                    document.getElementById('footer-text').textContent = data.footer.footer_text || '';
-                }
-            } catch (e) { /* ignore */ }
+        // Custom modal replacement for alert() and confirm()
+        function showCustomConfirm(message, title = '确认操作') {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('confirm-modal');
+                const titleEl = document.getElementById('confirm-title');
+                const messageEl = document.getElementById('confirm-message');
+                const okBtn = document.getElementById('confirm-ok');
+                const cancelBtn = document.getElementById('confirm-cancel');
+
+                titleEl.textContent = title;
+                messageEl.textContent = message;
+                modal.classList.add('active');
+
+                const onOk = () => {
+                    modal.classList.remove('active');
+                    okBtn.removeEventListener('click', onOk);
+                    cancelBtn.removeEventListener('click', onCancel);
+                    resolve(true);
+                };
+                const onCancel = () => {
+                    modal.classList.remove('active');
+                    okBtn.removeEventListener('click', onOk);
+                    cancelBtn.removeEventListener('click', onCancel);
+                    resolve(false);
+                };
+
+                okBtn.addEventListener('click', onOk);
+                cancelBtn.addEventListener('click', onCancel);
+            });
         }
+        
+        // Global variable to store node data
+        let nodesData = [];
+        
+        // Define an array of 7 darker colors
+         const macaronColors = [
+            "#B3E0F2", // Powder Blue
+            "#F9D3E6", // Pale Pink
+            "#C4E8D0", // Mint Green
+            "#F9EBAD", // Creamy Yellow
+            "#DED0F2", // Lavender
+            "#F0B3B3", // Coral Pink
+            "#B3D9FF"  // Sky Blue
+        ];
+
         const API_URL = 'http://192.168.0.28:5003/api/timeline';
         let editingNodeId = null;
 
@@ -275,24 +344,33 @@
                 if (!response.ok) {
                     throw new Error('Network response was not ok');
                 }
-                const nodes = await response.json();
-                renderTimeline(nodes);
+                nodesData = await response.json(); // Store data in a global variable
+                renderTimeline(nodesData);
+                // Call renderConnectors after a short delay to allow for DOM rendering
+                setTimeout(() => {
+                    renderConnectors(nodesData);
+                }, 100);
             } catch (error) {
                 console.error("Failed to fetch timeline nodes:", error);
-                renderTimeline([]); // 不显示任何节点
+                renderTimeline([]); // Do not display any nodes
+                renderConnectors([]); // Do not display any connector lines
             }
         }
-
+        
         // Render the timeline UI
         function renderTimeline(nodes) {
             const container = document.getElementById('timeline-container');
+            // Find the SVG element and clear the container content without removing the SVG
+            const svgElement = document.getElementById('timeline-connector-svg');
             container.innerHTML = '';
-            nodes = nodes.slice().reverse();
+            container.appendChild(svgElement);
+
+
             nodes.forEach((node, index) => {
-                const isEven = index % 2 === 1;
-                const alignmentClass = 'timeline-item';
-                // For even (left) items, place action buttons at top right; for odd (right), at top left
-                const actionBtnDiv = isEven
+                const isRight = index % 2 === 1;
+                const alignmentClass = 'timeline-item ' + (isRight ? 'is-right' : 'is-left');
+                // 按钮始终在远离中心的一侧
+                const actionBtnDiv = isRight
                   ? `<div class="absolute top-2 right-2 flex space-x-2">
                         <button onclick="openEditModal('${node.id}')" class="action-btn rounded-full bg-blue-500 hover:bg-blue-600 text-white shadow-md p-2 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-300" title="编辑">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -317,10 +395,11 @@
                             </svg>
                         </button>
                     </div>`;
+
                 const html = `
-                    <div class="${alignmentClass} flex items-center mb-10">
+                    <div class="${alignmentClass} flex items-center mb-10" id="node-${node.id}">
                         <div class="relative w-full">
-                            <div class="bg-white rounded-lg p-6 shadow-lg ${isEven ? 'ml-auto' : ''}">
+                            <div class="bg-white rounded-lg p-6 shadow-lg">
                                 <div class="mb-2">
                                     <h3 class="font-extrabold text-2xl text-gray-900 leading-tight">${node.nodeName}</h3>
                                     <h4 class="font-semibold text-lg text-gray-800 mt-1" style="margin-left:0;">${node.title}</h4>
@@ -330,12 +409,104 @@
                                 ${actionBtnDiv}
                             </div>
                         </div>
-                        <div class="timeline-dot" style="border-color: ${node.color};">
-                            <img src="${node.image}" alt="Node Icon" style="width:140px;height:140px;object-fit:cover;border-radius:9999px;">
+                        <div class="timeline-dot" style="border-color: ${node.color};" id="dot-${node.id}">
+                            <img src="${node.image}" alt="Node Icon" style="width:108px;height:108px;object-fit:cover;border-radius:9999px;">
                         </div>
                     </div>
                 `;
                 container.innerHTML += html;
+            });
+        }
+        
+        // Renders the timeline connector lines
+        function renderConnectors(nodes) {
+            const svg = document.getElementById('timeline-connector-svg');
+            if (!svg) return;
+            // Clear existing lines
+            svg.innerHTML = '';
+            if (nodes.length <= 1) return;
+            // Always get up-to-date bounding rect (after scaling)
+            const rect = svg.parentElement.getBoundingClientRect();
+            // 保持 desktop 和 mobile 坐标系一致，全部用缩放后的坐标
+            svg.setAttribute('width', rect.width);
+            svg.setAttribute('height', rect.height);
+            let dotRadius = 60;
+            const gap = 15;
+            for (let i = 0; i < nodes.length - 1; i++) {
+                const currentNodeId = nodes[i].id;
+                const nextNodeId = nodes[i+1].id;
+                const currentDot = document.getElementById(`dot-${currentNodeId}`);
+                const nextDot = document.getElementById(`dot-${nextNodeId}`);
+                if (currentDot && nextDot) {
+                    let currentRect = currentDot.getBoundingClientRect();
+                    let nextRect = nextDot.getBoundingClientRect();
+                    let rectLeft = rect.left;
+                    let rectTop = rect.top;
+                    let scale = 1;
+                    if (window.innerWidth < 640) {
+                        scale = 0.4;
+                        rectLeft = rect.left / scale;
+                        rectTop = rect.top / scale;
+                        currentRect = {
+                            left: (currentRect.left + window.scrollX) / scale,
+                            top: (currentRect.top + window.scrollY) / scale,
+                            width: currentRect.width / scale,
+                            height: currentRect.height / scale
+                        };
+                        nextRect = {
+                            left: (nextRect.left + window.scrollX) / scale,
+                            top: (nextRect.top + window.scrollY) / scale,
+                            width: nextRect.width / scale,
+                            height: nextRect.height / scale
+                        };
+                    }
+                    const currentCenterX = currentRect.left + currentRect.width / 2 - rectLeft;
+                    const currentCenterY = currentRect.top + currentRect.height / 2 - rectTop;
+                    const nextCenterX = nextRect.left + nextRect.width / 2 - rectLeft;
+                    const nextCenterY = nextRect.top + nextRect.height / 2 - rectTop;
+                    // Calculate the distance and angle between the two centers
+                    const dx = nextCenterX - currentCenterX;
+                    const dy = nextCenterY - currentCenterY;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    const lineColor = nodes[i+1].color;
+                    console.log(`Drawing line from ${currentNodeId} to ${nextNodeId} with color ${lineColor}`);
+                    console.log(`Current distance: (${distance}), dotRadius:(${dotRadius}),  gap: (${gap})`);
+
+                    if (distance > 0) {
+                        const unitX = dx / distance;
+                        const unitY = dy / distance;
+                        const startX = currentCenterX + unitX * (dotRadius + gap);
+                        const startY = currentCenterY + unitY * (dotRadius + gap);
+                        const endX = nextCenterX - unitX * (dotRadius + gap);
+                        const endY = nextCenterY - unitY * (dotRadius + gap);
+                        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                        line.setAttribute('x1', startX);
+                        line.setAttribute('y1', startY);
+                        line.setAttribute('x2', endX);
+                        line.setAttribute('y2', endY);
+                        line.setAttribute('stroke', lineColor);
+                        line.setAttribute('stroke-width', '4');
+                        line.setAttribute('stroke-linecap', 'round');
+                        svg.appendChild(line);
+                    }
+                }
+            }
+        }
+
+        // --- Mobile/resize fix: use ResizeObserver and orientationchange to redraw connectors ---
+        function setupConnectorObservers() {
+            const container = document.getElementById('timeline-container');
+            if (!container) return;
+            // Use ResizeObserver for container size changes (including mobile scaling)
+            if (window.ResizeObserver) {
+                const ro = new ResizeObserver(() => {
+                    renderConnectors(nodesData);
+                });
+                ro.observe(container);
+            }
+            // Redraw on orientation change
+            window.addEventListener('orientationchange', () => {
+                setTimeout(() => renderConnectors(nodesData), 300);
             });
         }
 
@@ -377,7 +548,8 @@
 
         // Delete a node
         async function deleteNode(nodeId) {
-            if (!confirm('你确定要删除这个节点吗？')) {
+            const confirmed = await showCustomConfirm('你确定要删除这个节点吗？');
+            if (!confirmed) {
                 return;
             }
             try {
@@ -393,10 +565,24 @@
             }
         }
 
+        // Get node data for editing
+        async function getNodeData(nodeId) {
+            try {
+                const response = await fetch(`${API_URL}/${nodeId}`);
+                if (!response.ok) {
+                    throw new Error('Node data not found');
+                }
+                return await response.json();
+            } catch (error) {
+                console.error(error);
+                return null;
+            }
+        }
+
         // --- Modal Handling ---
 
-        function closeModal() {
-            document.querySelectorAll('.modal').forEach(modal => modal.classList.remove('active'));
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
             editingNodeId = null;
         }
 
@@ -404,6 +590,11 @@
             const modal = document.getElementById('node-modal');
             document.getElementById('modal-title').textContent = '增加新节点';
             document.getElementById('node-form').reset();
+            
+            // Randomly select a darker color
+            const randomColor = macaronColors[Math.floor(Math.random() * macaronColors.length)];
+            document.getElementById('color').value = randomColor;
+
             editingNodeId = null;
             modal.classList.add('active');
         }
@@ -412,7 +603,7 @@
             const modal = document.getElementById('node-modal');
             const node = await getNodeData(nodeId);
             if (!node) {
-                alert('该节点为示例数据，无法编辑。请先添加自己的节点。');
+                await showCustomConfirm('该节点为示例数据，无法编辑。请先添加自己的节点。');
                 return;
             }
 
@@ -426,16 +617,24 @@
             modal.classList.add('active');
         }
 
-        async function getNodeData(nodeId) {
+        async function fetchHeaderFooterData() {
             try {
-                const response = await fetch(`${API_URL}/${nodeId}`);
-                if (!response.ok) {
-                    throw new Error('Node data not found');
-                }
+                const response = await fetch('/api/header_footer');
+                if (!response.ok) return { header: {}, footer: {} };
                 return await response.json();
-            } catch (error) {
-                console.error(error);
-                return null;
+            } catch (e) {
+                return { header: {}, footer: {} };
+            }
+        }
+
+        async function fetchAndRenderHeaderFooter() {
+            const data = await fetchHeaderFooterData();
+            if (data.header) {
+                document.getElementById('main-title').textContent = data.header.main_title || '';
+                document.getElementById('subtitle').textContent = data.header.subtitle || '';
+            }
+            if (data.footer) {
+                document.getElementById('footer-text').textContent = data.footer.footer_text || '';
             }
         }
 
@@ -461,7 +660,7 @@
                 img.onload = () => {
                     const canvas = document.createElement('canvas');
                     const ctx = canvas.getContext('2d');
-                    const size = 200; // 提高分辨率
+                    const size = 200; // Increase resolution
                     let sourceX = 0;
                     let sourceY = 0;
                     let sourceWidth = img.width;
@@ -509,7 +708,7 @@
                     } else {
                         await addNode(nodeData);
                     }
-                    closeModal();
+                    closeModal('node-modal');
                 });
             } else {
                 if (editingNodeId) {
@@ -522,49 +721,64 @@
                 } else {
                     await addNode(nodeData);
                 }
-                closeModal();
+                closeModal('node-modal');
             }
         });
 
         // Handle form submission for editing header
         document.getElementById('header-form').addEventListener('submit', async (e) => {
             e.preventDefault();
+            const data = await fetchHeaderFooterData();
             const mainTitle = document.getElementById('modal-main-title').value;
             const subtitle = document.getElementById('modal-subtitle').value;
+            const payload = {
+                header: { main_title: mainTitle, subtitle: subtitle },
+                footer: data.footer
+            };
             try {
                 await fetch('/api/header_footer', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        header: { main_title: mainTitle, subtitle: subtitle }
-                    })
+                    body: JSON.stringify(payload)
                 });
                 await fetchAndRenderHeaderFooter();
             } catch (err) { /* ignore */ }
-            closeModal();
+            closeModal('header-modal');
         });
 
         // Handle form submission for editing footer
         document.getElementById('footer-form').addEventListener('submit', async (e) => {
             e.preventDefault();
+            const data = await fetchHeaderFooterData();
             const footerText = document.getElementById('modal-footer-text').value;
+            const payload = {
+                header: data.header,
+                footer: { footer_text: footerText }
+            };
             try {
                 await fetch('/api/header_footer', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        footer: { footer_text: footerText }
-                    })
+                    body: JSON.stringify(payload)
                 });
                 await fetchAndRenderHeaderFooter();
             } catch (err) { /* ignore */ }
-            closeModal();
+            closeModal('footer-modal');
         });
         
-        // Initial fetch on page load
+
+        // Re-render connectors on window resize
+        window.addEventListener('resize', () => {
+            setTimeout(() => renderConnectors(nodesData), 100);
+        });
+
+        // Initial fetches on page load
         document.addEventListener('DOMContentLoaded', () => {
             fetchAndRenderHeaderFooter();
             fetchAndRenderNodes();
+            setupConnectorObservers();
+            // Extra redraw after 500ms for mobile scaling quirks
+            setTimeout(() => renderConnectors(nodesData), 500);
         });
     </script>
 
