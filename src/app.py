@@ -27,6 +27,48 @@ def load_timeline_nodes():
     return {}
 
 def save_timeline_nodes(nodes):
+    import base64
+    import time
+    # 保存到 static/images 目录下，前端可直接访问
+    static_dir = os.path.join(BASE_DIR, 'static')
+    images_dir = os.path.join(static_dir, 'images')
+    if not os.path.exists(images_dir):
+        os.makedirs(images_dir)
+
+    for node_id, node in nodes.items():
+        # Handle original image
+        orig_img_b64 = node.get('original_image_base64')
+        if orig_img_b64:
+            ext = '.jpg' if orig_img_b64.startswith('data:image/jpeg') else '.png'
+            filename = f"{int(time.time())}_{uuid.uuid4().hex}{ext}"
+            filepath = os.path.join(images_dir, filename)
+            if ',' in orig_img_b64:
+                orig_img_b64 = orig_img_b64.split(',', 1)[1]
+            with open(filepath, 'wb') as imgf:
+                imgf.write(base64.b64decode(orig_img_b64))
+            node['original_image'] = f"static/images/{filename}"
+        # 清理 base64 字段
+        node.pop('original_image_base64', None)
+
+        # Handle cropped avatar image
+        avatar_b64 = node.get('avatar_image_base64')
+        if avatar_b64:
+            ext = '.jpg' if avatar_b64.startswith('data:image/jpeg') else '.png'
+            avatar_filename = f"{node_id}_avatar{ext}"
+            avatar_filepath = os.path.join(images_dir, avatar_filename)
+            if ',' in avatar_b64:
+                avatar_b64 = avatar_b64.split(',', 1)[1]
+            with open(avatar_filepath, 'wb') as imgf:
+                imgf.write(base64.b64decode(avatar_b64))
+            node['avatar_image'] = f"static/images/{avatar_filename}"
+        node.pop('avatar_image_base64', None)
+
+        # 彻底清理所有 image base64 字段
+        node.pop('image_base64', None)
+        # 如果 image 字段是 base64，也清理掉，只保留路径
+        if 'image' in node and isinstance(node['image'], str) and node['image'].startswith('data:image/'):
+            node.pop('image')
+
     with open(TIMELINE_NODES_PATH, 'w') as f:
         json.dump(nodes, f, ensure_ascii=False, indent=2)
 

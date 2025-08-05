@@ -1,6 +1,41 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+    <!-- Cropper.js CSS -->
+    <link  href="https://cdn.jsdelivr.net/npm/cropperjs@1.5.13/dist/cropper.min.css" rel="stylesheet"/>
+    <style>
+    /* 裁剪弹窗样式 */
+    #cropper-modal {
+        display: none;
+        position: fixed;
+        z-index: 9999;
+        left: 0; top: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.5);
+        align-items: center;
+        justify-content: center;
+    }
+    #cropper-modal.active {
+        display: flex;
+    }
+    #cropper-modal-content {
+        background: #fff;
+        border-radius: 12px;
+        padding: 24px 18px 18px 18px;
+        min-width: 320px;
+        max-width: 95vw;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    #cropper-image {
+        max-width: 320px;
+        max-height: 320px;
+        display: block;
+        margin-bottom: 18px;
+        border-radius: 8px;
+    }
+    </style>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>故事线</title>
@@ -152,7 +187,20 @@
         }
     </style>
 </head>
+    <!-- Cropper.js -->
+    <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.5.13/dist/cropper.min.js"></script>
 <body class="bg-gray-100 text-gray-800">
+
+    <!-- 裁剪图片弹窗 -->
+    <div id="cropper-modal">
+      <div id="cropper-modal-content">
+        <img id="cropper-image" src="" alt="裁剪图片" />
+        <div class="flex gap-4 mt-2">
+          <button id="cropper-cancel" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">取消</button>
+          <button id="cropper-confirm" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">确定</button>
+        </div>
+      </div>
+    </div>
 
     <!-- Header Section -->
     <header class="bg-gray-800 text-white p-6 md:p-8 rounded-b-lg shadow-xl">
@@ -348,20 +396,53 @@
         }
         
         // Render the timeline UI
+        // 大图预览弹窗DOM
+        function ensureImagePreviewModal() {
+            if (document.getElementById('image-preview-modal')) return;
+            const modal = document.createElement('div');
+            modal.id = 'image-preview-modal';
+            modal.style.display = 'none';
+            modal.style.position = 'fixed';
+            modal.style.zIndex = 99999;
+            modal.style.left = 0;
+            modal.style.top = 0;
+            modal.style.width = '100vw';
+            modal.style.height = '100vh';
+            modal.style.background = 'rgba(0,0,0,0.25)';
+            modal.style.justifyContent = 'center';
+            modal.style.alignItems = 'center';
+            modal.style.pointerEvents = 'none';
+            modal.innerHTML = `<div id="image-preview-content" style="display:flex;align-items:center;justify-content:center;width:100vw;height:100vh;"><img id="image-preview-img" style="max-height:640px;max-width:60vw;border:4px solid #fff;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.18);background:#fff;object-fit:contain;" /></div>`;
+            document.body.appendChild(modal);
+        }
+
+        function showImagePreview(src) {
+            ensureImagePreviewModal();
+            const modalEl = document.getElementById('image-preview-modal');
+            const img = document.getElementById('image-preview-img');
+            img.src = src;
+            modalEl.style.display = 'flex';
+            modalEl.style.pointerEvents = 'auto';
+        }
+        function hideImagePreview() {
+            const modalEl = document.getElementById('image-preview-modal');
+            if (modalEl) {
+                modalEl.style.display = 'none';
+                modalEl.style.pointerEvents = 'none';
+            }
+        }
+
         function renderTimeline(nodes) {
             const container = document.getElementById('timeline-container');
-            // Find the SVG element and the center line, and clear the container content without removing them
             const svgElement = document.getElementById('timeline-connector-svg');
             const centerLine = document.querySelector('.timeline-center-line');
             container.innerHTML = '';
             if (centerLine) container.appendChild(centerLine);
             if (svgElement) container.appendChild(svgElement);
 
-
             nodes.forEach((node, index) => {
                 const isRight = index % 2 === 1;
                 const alignmentClass = 'timeline-item ' + (isRight ? 'is-right' : 'is-left');
-                // 按钮始终在远离中心的一侧
                 const actionBtnDiv = isRight
                   ? `<div class="absolute top-2 right-2 flex space-x-2">
                         <button onclick="openEditModal('${node.id}')" class="action-btn rounded-full bg-blue-500 hover:bg-blue-600 text-white shadow-md p-2 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-300" title="编辑">
@@ -388,6 +469,9 @@
                         </button>
                     </div>`;
 
+                // 优先显示 avatar_image，其次 original_image，再次 image 字段
+                let imgSrc = node.avatar_image || node.original_image || node.image || 'https://placehold.co/100x100';
+
                 const html = `
                     <div class="${alignmentClass} flex items-center" id="node-${node.id}">
                         <div class="relative w-full">
@@ -401,12 +485,38 @@
                             </div>
                         </div>
                         <div class="timeline-dot" style="border-color: ${node.color};" id="dot-${node.id}">
-                            <img src="${node.image}" alt="Node Icon" style="width:108px;height:108px;object-fit:cover;border-radius:9999px;">
+                            <img src="${imgSrc}" alt="Node Icon" style="width:108px;height:108px;object-fit:cover;border-radius:9999px;cursor:pointer;" 
+                                data-preview-src="${node.original_image || imgSrc}"
+                            >
                         </div>
                     </div>
                 `;
                 container.innerHTML += html;
             });
+            // 绑定全局关闭事件
+            ensureImagePreviewModal();
+            const modalEl = document.getElementById('image-preview-modal');
+            if (modalEl) {
+                modalEl.onmouseenter = null;
+                modalEl.onmouseleave = hideImagePreview;
+                modalEl.onclick = hideImagePreview;
+            }
+            // 挂载全局方法
+            window.showImagePreview = showImagePreview;
+            window.hideImagePreview = hideImagePreview;
+
+            // 只在按下时显示大图，松开或移开时消失
+            document.querySelectorAll('.timeline-dot img').forEach(img => {
+                img.addEventListener('mousedown', e => {
+                    showImagePreview(img.getAttribute('data-preview-src'));
+                });
+            });
+        // 保证函数体正常闭合，无多余括号
+            // 绑定全局关闭事件
+            ensureImagePreviewModal();
+            // 挂载全局方法
+            window.showImagePreview = showImagePreview;
+            window.hideImagePreview = hideImagePreview;
         }
         
         // Renders the timeline connector lines
@@ -644,33 +754,59 @@
         // --- Image Cropping and Handling ---
 
         function cropImageAndGetBase64(file, callback) {
+            // 新实现：弹出裁剪弹窗，用户拖拽后裁剪
             const reader = new FileReader();
             reader.onload = (e) => {
-                const img = new Image();
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
-                    const size = 200; // Increase resolution
-                    let sourceX = 0;
-                    let sourceY = 0;
-                    let sourceWidth = img.width;
-                    let sourceHeight = img.height;
+                const cropperModal = document.getElementById('cropper-modal');
+                const cropperImg = document.getElementById('cropper-image');
+                cropperImg.src = e.target.result;
+                cropperModal.classList.add('active');
 
-                    if (img.width > img.height) {
-                        sourceWidth = img.height;
-                        sourceX = (img.width - img.height) / 2;
-                    } else {
-                        sourceHeight = img.width;
-                        sourceY = (img.height - img.width) / 2;
-                    }
-
-                    canvas.width = size;
-                    canvas.height = size;
-
-                    ctx.drawImage(img, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, size, size);
-                    callback(canvas.toDataURL('image/png'));
+                let cropper = null;
+                // 等图片加载后初始化 cropper
+                cropperImg.onload = () => {
+                    if (cropper) cropper.destroy();
+                    cropper = new Cropper(cropperImg, {
+                        aspectRatio: 1,
+                        viewMode: 1,
+                        dragMode: 'move',
+                        autoCropArea: 1,
+                        background: false,
+                        movable: true,
+                        zoomable: true,
+                        rotatable: false,
+                        scalable: false,
+                        minCropBoxWidth: 100,
+                        minCropBoxHeight: 100
+                    });
                 };
-                img.src = e.target.result;
+
+                // 取消按钮
+                document.getElementById('cropper-cancel').onclick = () => {
+                    cropperModal.classList.remove('active');
+                    if (cropper) cropper.destroy();
+                };
+                // 确定按钮
+                document.getElementById('cropper-confirm').onclick = () => {
+                    // 获取裁剪区域
+                    const canvas = cropper.getCroppedCanvas({ width: 200, height: 200, imageSmoothingQuality: 'high' });
+                    // 生成圆形头像
+                    const circleCanvas = document.createElement('canvas');
+                    circleCanvas.width = 200;
+                    circleCanvas.height = 200;
+                    const ctx = circleCanvas.getContext('2d');
+                    ctx.clearRect(0, 0, 200, 200);
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.arc(100, 100, 100, 0, 2 * Math.PI);
+                    ctx.closePath();
+                    ctx.clip();
+                    ctx.drawImage(canvas, 0, 0, 200, 200);
+                    ctx.restore();
+                    cropperModal.classList.remove('active');
+                    if (cropper) cropper.destroy();
+                    callback(circleCanvas.toDataURL('image/png'));
+                };
             };
             reader.readAsDataURL(file);
         }
@@ -684,28 +820,31 @@
             const nodeData = {
                 title: formData.get('title'),
                 content: formData.get('content'),
-                color: formData.get('color'),
-                image: "https://placehold.co/100x100" // Default image placeholder
+                color: formData.get('color')
             };
 
             const imageFile = formData.get('imageUpload');
             if (imageFile && imageFile.size > 0) {
-                cropImageAndGetBase64(imageFile, async (base64Image) => {
-                    nodeData.image = base64Image;
-                    if (editingNodeId) {
-                        await updateNode(editingNodeId, nodeData);
-                    } else {
-                        await addNode(nodeData);
-                    }
-                    closeModal('node-modal');
-                });
+                // 先读取原图 base64
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const originalBase64 = e.target.result;
+                    // 再裁剪头像
+                    cropImageAndGetBase64(imageFile, async (avatarBase64) => {
+                        nodeData.original_image_base64 = originalBase64;
+                        nodeData.avatar_image_base64 = avatarBase64;
+                        if (editingNodeId) {
+                            await updateNode(editingNodeId, nodeData);
+                        } else {
+                            await addNode(nodeData);
+                        }
+                        closeModal('node-modal');
+                    });
+                };
+                reader.readAsDataURL(imageFile);
             } else {
                 if (editingNodeId) {
-                    // If no new image, try to keep the existing one
-                    const existingNode = await getNodeData(editingNodeId);
-                    if (existingNode) {
-                         nodeData.image = existingNode.image;
-                    }
+                    // If no new image,不传base64，后端保留原有图片
                     await updateNode(editingNodeId, nodeData);
                 } else {
                     await addNode(nodeData);
