@@ -372,6 +372,7 @@
         </div>
     </div>
     <script>
+        
         // --- Modal logic for adding new entry ---
         // 格式化 'Mon DD' 为 YYYY-MM-DD
         function formatDateYYYYMMDD(dateStr) {
@@ -588,8 +589,8 @@
 
         function openAddEntryModal() {
         // Always reset to 'add new' mode
-        modalEntryIndex = null;
         const chartData = window.chart_data || [];
+        modalEntryIndex = chartData.length;
         // 默认数据：可选，使用最新一条数据作为初始值，否则用默认值
         let entry = null;
         if (chartData.length > 0) {
@@ -692,7 +693,7 @@
             const values = {};
             Array.from(modalElementList.children).forEach(li => {
                 const key = li.dataset.key;
-                const value = parseFloat(li.querySelector('.modal-element-value').textContent);
+                const value = parseFloat(li.dataset.value);
                 values[key] = value;
             });
             // Compose data
