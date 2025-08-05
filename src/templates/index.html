@@ -43,16 +43,17 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* 媒体查询：当屏幕宽度小于640px时应用缩放 */
+        :root {
+            --mobile-scale: 0.4;
+        }
         @media (max-width: 640px) {
             body {
-                /* 将整个页面的内容缩放到50% */
-                transform: scale(0.4);
-                /* 确保缩放从左上角开始，而不是中心 */
+                /* 使用 CSS 变量控制缩放比例 */
+                transform: scale(var(--mobile-scale));
                 transform-origin: top left;
-                /* 调整页面的尺寸以容纳被缩放的内容，并启用滚动 */
-                width: 280vw;
+                width: calc(250vw);
                 height: 20vh;
-                overflow-x: auto; /* 允许水平滚动 */
+                overflow-x: auto;
             }
         }
 
@@ -86,14 +87,19 @@
         }
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6;
+            background-color: #fff;
         }
         /* Header font size smaller */
         #main-title {
-            font-size: 1.6rem !important;
+            font-size: 3rem !important;
+            color: #111 !important;
         }
         #subtitle {
             font-size: 1rem !important;
+            color: #222 !important;
+        }
+        #footer-text {
+            color: #222 !important;
         }
         /* Timeline styles */
         .timeline {
@@ -102,7 +108,10 @@
         }
         .timeline-item {
             position: relative;
-            padding: 1rem 0;
+            padding-top: 0;
+            padding-bottom: 0;
+            padding-left: 0;
+            padding-right: 0;
             width: 50%;
             z-index: 2; /* Ensure timeline items are above the connector lines */
         }
@@ -131,7 +140,7 @@
             align-items: center;
             justify-content: center;
             overflow: hidden;
-            border: 4px solid;
+            border: 2px solid;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
         .timeline-item.is-left .timeline-dot {
@@ -143,7 +152,7 @@
             transform: translateY(-50%) translateX(-30%);
         }
         .timeline-divider {
-            height: 4px;
+            height: 2px;
             width: 100%;
             margin: 0.5rem 0;
         }
@@ -189,7 +198,7 @@
 </head>
     <!-- Cropper.js -->
     <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.5.13/dist/cropper.min.js"></script>
-<body class="bg-gray-100 text-gray-800">
+<body class="bg-white text-black">
 
     <!-- 裁剪图片弹窗 -->
     <div id="cropper-modal">
@@ -203,13 +212,13 @@
     </div>
 
     <!-- Header Section -->
-    <header class="bg-gray-800 text-white p-6 md:p-8 rounded-b-lg shadow-xl">
-        <div class="container mx-auto flex flex-col md:flex-row justify-between items-center">
-            <div id="header-content" class="text-center md:text-left">
-                <h1 id="main-title" class="text-3xl md:text-4xl lg:text-5xl font-extrabold tracking-tight mb-2">THE LOVE STORY</h1>
+    <header class="bg-white text-black p-6 md:p-8">
+        <div class="container mx-auto flex flex-row items-center justify-between w-full">
+            <div id="header-content" class="text-center flex-1">
+                <h1 id="main-title" class="text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight mb-2">THE LOVE STORY</h1>
                 <p id="subtitle" class="text-lg md:text-xl text-gray-300">A Journey Through Time for you or what you love</p>
             </div>
-            <button onclick="openHeaderModal()" class="header-action-btn mt-4 md:mt-0 px-6 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors shadow-md">
+            <button onclick="openHeaderModal()" class="header-action-btn ml-4 px-6 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors shadow-md self-start">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                     <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.389-8.379-2.83-2.828z" />
                 </svg>
@@ -219,14 +228,14 @@
 
     <!-- Main Content Section -->
     <main class="container mx-auto px-4 py-8">
-        <div class="flex justify-center mb-8">
+        <div class="flex justify-center">
             <button id="add-node-button" onclick="openAddModal()" class="header-action-btn flex items-center justify-center w-14 h-14 bg-green-600 text-white rounded-full hover:bg-green-700 transition-colors shadow-lg text-3xl">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" viewBox="0 0 20 20" fill="currentColor">
                     <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" />
                 </svg>
             </button>
         </div>
-        <div id="timeline-container" class="timeline relative max-w-4xl mx-auto mt-12">
+        <div id="timeline-container" class="timeline relative max-w-4xl mx-auto">
             <!-- SVG container for drawing the connector lines -->
             <svg id="timeline-connector-svg" class="timeline-connector"></svg>
             <!-- Timeline items will be rendered here by JavaScript -->
@@ -234,7 +243,7 @@
     </main>
 
     <!-- Footer Section -->
-    <footer class="bg-gray-800 text-white p-4 text-center rounded-t-lg mt-8 shadow-xl">
+    <footer class="bg-white text-black p-4 text-center mt-8">
         <div class="container mx-auto flex items-center justify-center gap-2">
             <p id="footer-text" class="text-sm mb-0">© 2024 The Love Company. All rights reserved.</p>
             <button onclick="openFooterModal()" class="footer-action-btn px-4 py-1 text-xs bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors shadow-md ml-2">
@@ -327,6 +336,8 @@
     </div>
 
     <script>
+        // 全局移动端缩放参数，便于统一维护
+        const MOBILE_SCALE = 0.4;
         // Custom modal replacement for alert() and confirm()
         function showCustomConfirm(message, title = '确认操作') {
             return new Promise((resolve) => {
@@ -406,13 +417,20 @@
             modal.style.zIndex = 99999;
             modal.style.left = 0;
             modal.style.top = 0;
-            modal.style.width = '100vw';
-            modal.style.height = '100vh';
+            // 动态适配 mobile 缩放
+            let modalWidth = '100vw', modalHeight = '100vh', imgMaxWidth = '60vw', imgMaxHeight = '640px';
+            if (window.innerWidth < 640) {
+                modalWidth = (100 / MOBILE_SCALE) + 'vw';
+                imgMaxWidth = (60 / MOBILE_SCALE) + 'vw';
+                imgMaxHeight = (640 / MOBILE_SCALE) + 'px';
+            }
+            modal.style.width = modalWidth;
+            modal.style.height = modalHeight;
             modal.style.background = 'rgba(0,0,0,0.25)';
             modal.style.justifyContent = 'center';
             modal.style.alignItems = 'center';
             modal.style.pointerEvents = 'none';
-            modal.innerHTML = `<div id="image-preview-content" style="display:flex;align-items:center;justify-content:center;width:100vw;height:100vh;"><img id="image-preview-img" style="max-height:640px;max-width:60vw;border:4px solid #fff;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.18);background:#fff;object-fit:contain;" /></div>`;
+            modal.innerHTML = `<div id="image-preview-content" style="display:flex;align-items:center;justify-content:center;width:${modalWidth};height:${modalHeight};"><img id="image-preview-img" style="max-height:${imgMaxHeight};max-width:${imgMaxWidth};border:4px solid #fff;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.18);background:#fff;object-fit:contain;" /></div>`;
             document.body.appendChild(modal);
         }
 
@@ -485,7 +503,7 @@
                             </div>
                         </div>
                         <div class="timeline-dot" style="border-color: ${node.color};" id="dot-${node.id}">
-                            <img src="${imgSrc}" alt="Node Icon" style="width:108px;height:108px;object-fit:cover;border-radius:9999px;cursor:pointer;" 
+                            <img src="${imgSrc}" alt="Node Icon" style="width:114px;height:114px;object-fit:cover;border-radius:9999px;cursor:pointer;" 
                                 data-preview-src="${node.original_image || imgSrc}"
                             >
                         </div>
@@ -545,7 +563,7 @@
                     let rectTop = rect.top;
                     let scale = 1;
                     if (window.innerWidth < 640) {
-                        scale = 0.4;
+                        scale = MOBILE_SCALE;
                         rectLeft = rect.left / scale;
                         rectTop = rect.top / scale;
                         currentRect = {
@@ -588,6 +606,7 @@
                         line.setAttribute('stroke', lineColor);
                         line.setAttribute('stroke-width', '4');
                         line.setAttribute('stroke-linecap', 'round');
+                        line.setAttribute('stroke-dasharray', '4,16');
                         svg.appendChild(line);
                     }
                 }
