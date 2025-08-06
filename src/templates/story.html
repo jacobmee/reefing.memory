@@ -108,44 +108,27 @@
             transition: opacity 0.2s;
         }
 
-        .action-btn {
-            opacity: 0;
-            transition: opacity 0.2s;
-        }
+        /* 只有鼠标移到按钮本身时才显示 */
         .action-btn:hover {
             opacity: 1;
             pointer-events: auto;
         }
 
-        /* Header action button visibility only on button hover */
-        .header-action-btn {
-            opacity: 0;
-            transition: opacity 0.2s;
-        }
         .header-action-btn:hover {
             opacity: 1;
             pointer-events: auto;
         }
 
-        /* Footer action button visibility only on button hover */
-        .footer-action-btn {
-            opacity: 0;
-            transition: opacity 0.2s;
-        }
         .footer-action-btn:hover {
             opacity: 1;
             pointer-events: auto;
         }
 
-        /* Add node button visibility only on button hover */
-        #add-node-button {
-            opacity: 0;
-            transition: opacity 0.2s;
-        }
         #add-node-button:hover {
             opacity: 1;
             pointer-events: auto;
         }
+
 
         body {
             font-family: 'Inter', sans-serif;
@@ -175,15 +158,36 @@
 
         .storyline-item {
             position: relative;
+            padding-top: 0;
+            padding-bottom: 0;
+            padding-left: 0;
+            padding-right: 0;
             width: 50%;
             z-index: 2;
             /* Ensure storyline items are above the connector lines */
         }
 
+        .storyline-item.is-right {
+            margin-left: 50%;
+            padding-left: 5.5rem;
+            text-align: left;
+            transform: translateX(10%);
+        }
+
+        .storyline-item.is-left {
+            margin-right: 50%;
+            padding-right: 5.5rem;
+            text-align: right;
+            transform: translateX(-10%);
+        }
+
         .storyline-dot {
+            position: absolute;
             width: 120px;
             height: 120px;
             border-radius: 50%;
+            top: 50%;
+            transform: translateY(-50%);
             z-index: 10;
             background-color: white;
             display: flex;
@@ -192,6 +196,16 @@
             overflow: hidden;
             border: 2px solid;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .storyline-item.is-left .storyline-dot {
+            right: 20px;
+            transform: translateY(-50%) translateX(30%);
+        }
+
+        .storyline-item.is-right .storyline-dot {
+            left: 20px;
+            transform: translateY(-50%) translateX(-30%);
         }
 
         .storyline-divider {
@@ -212,6 +226,21 @@
 
         .modal.active {
             display: flex;
+        }
+
+        /* SVG connector line styles */
+        .storyline-connector {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            min-width: 100%;
+            height: 100%;
+            min-height: 100%;
+            pointer-events: none;
+            overflow: visible;
+            z-index: 1;
+            /* Ensure connectors are behind the storyline items */
         }
 
         /* Custom confirmation modal styles */
@@ -268,17 +297,21 @@
     </header>
 
     <!-- Main Content Section -->
-    <main class="container mx-auto px-4 py-8" style="margin-top:50px;margin-bottom:100px;">
-        <div id="storyline-row" style="display:flex;flex-direction:row;align-items:flex-end;justify-content:flex-start;">
-            <div id="storyline-container" class="storyline relative max-w-4xl mx-auto" style="flex:1;display:flex;"></div>
+    <main class="container mx-auto px-4 py-8">
+        <div class="flex justify-center">
             <button id="add-node-button" onclick="openAddModal()"
-                class="header-action-btn flex items-center justify-center w-14 h-14 bg-green-600 text-white rounded-full hover:bg-green-700 transition-colors shadow-lg text-3xl" style="margin-left:12px;align-self:flex-end;">
+                class="header-action-btn flex items-center justify-center w-14 h-14 bg-green-600 text-white rounded-full hover:bg-green-700 transition-colors shadow-lg text-3xl">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" viewBox="0 0 20 20" fill="currentColor">
                     <path fill-rule="evenodd"
                         d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
                         clip-rule="evenodd" />
                 </svg>
             </button>
+        </div>
+        <div id="storyline-container" class="storyline relative max-w-4xl mx-auto">
+            <!-- SVG container for drawing the connector lines -->
+            <svg id="storyline-connector-svg" class="storyline-connector"></svg>
+            <!-- Storyline items will be rendered here by JavaScript -->
         </div>
     </main>
 
@@ -304,14 +337,14 @@
             <h2 id="modal-title" class="text-2xl font-bold mb-4">增加新节点</h2>
             <form id="node-form" class="space-y-4">
                 <div>
-                    <label for="title" class="block text-sm font-medium text-gray-700">标题 (如: 小鸟菠菠)</label>
+                    <label for="title" class="block text-sm font-medium text-gray-700">标题 (如: Initial Consult)</label>
                     <input type="text" id="title" name="title"
                         class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" required>
                 </div>
                 <div>
-                    <label for="content" class="block text-sm font-medium text-gray-700">内容 (不超过20字)</label>
+                    <label for="content" class="block text-sm font-medium text-gray-700">内容 (不超过200字)</label>
                     <textarea id="content" name="content" rows="3"
-                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" maxlength="20"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" maxlength="200"
                         required></textarea>
                 </div>
                 <div>
@@ -441,34 +474,85 @@
             "#B3D9FF"  // Sky Blue
         ];
 
-        const API_URL = 'api/summary';
+        // 获取uuid参数
+        function getUUID() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('uuid') || '';
+        }
+        const API_URL = 'api/story';
+        function apiUrlWithUUID(path = '') {
+            const uuid = getUUID();
+            let base = API_URL;
+            if (path) base += '/' + path;
+            return uuid ? `${base}?uuid=${encodeURIComponent(uuid)}` : base;
+        }
         let editingNodeId = null;
 
-        // Fetch and render timeline nodes
+        // Fetch and render storyline nodes
         async function fetchAndRenderNodes() {
             try {
-                const response = await fetch(API_URL);
+                const response = await fetch(apiUrlWithUUID());
                 if (!response.ok) {
                     throw new Error('Network response was not ok');
                 }
-                let data = await response.json();
-                // 如果不是数组，尝试转换
-                if (!Array.isArray(data)) {
-                    if (data && typeof data === 'object') {
-                        data = Object.values(data);
-                    } else {
-                        data = [];
-                    }
-                }
-                nodesData = data;
-                renderSummary(nodesData);
+                nodesData = await response.json(); // Store data in a global variable
+                renderStoryline(nodesData);
+                // Call renderConnectors after a short delay to allow for DOM rendering
+                setTimeout(() => {
+                    renderConnectors(nodesData);
+                }, 100);
             } catch (error) {
                 console.error("Failed to fetch storyline nodes:", error);
-                renderSummary([]); // Do not display any nodes
+                renderStoryline([]); // Do not display any nodes
+                renderConnectors([]); // Do not display any connector lines
             }
         }
 
-        function renderSummary(nodes) {
+        // Render the storyline UI
+        // 大图预览弹窗DOM
+        function ensureImagePreviewModal() {
+            if (document.getElementById('image-preview-modal')) return;
+            const modal = document.createElement('div');
+            modal.id = 'image-preview-modal';
+            modal.style.display = 'none';
+            modal.style.position = 'fixed';
+            modal.style.zIndex = 99999;
+            modal.style.left = 0;
+            modal.style.top = 0;
+            // 动态适配 mobile 缩放
+            let modalWidth = '100vw', modalHeight = '100vh', imgMaxWidth = '60vw', imgMaxHeight = '640px';
+            if (window.innerWidth < 640) {
+                modalWidth = (100 / MOBILE_SCALE) + 'vw';
+                imgMaxWidth = (60 / MOBILE_SCALE) + 'vw';
+                imgMaxHeight = (640 / MOBILE_SCALE) + 'px';
+            }
+            modal.style.width = modalWidth;
+            modal.style.height = modalHeight;
+            modal.style.background = 'rgba(0,0,0,0.25)';
+            modal.style.justifyContent = 'center';
+            modal.style.alignItems = 'center';
+            modal.style.pointerEvents = 'none';
+            modal.innerHTML = `<div id="image-preview-content" style="display:flex;align-items:center;justify-content:center;width:${modalWidth};height:${modalHeight};"><img id="image-preview-img" style="max-height:${imgMaxHeight};max-width:${imgMaxWidth};border:4px solid #fff;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.18);background:#fff;object-fit:contain;" /></div>`;
+            document.body.appendChild(modal);
+        }
+
+        function showImagePreview(src) {
+            ensureImagePreviewModal();
+            const modalEl = document.getElementById('image-preview-modal');
+            const img = document.getElementById('image-preview-img');
+            img.src = src;
+            modalEl.style.display = 'flex';
+            modalEl.style.pointerEvents = 'auto';
+        }
+        function hideImagePreview() {
+            const modalEl = document.getElementById('image-preview-modal');
+            if (modalEl) {
+                modalEl.style.display = 'none';
+                modalEl.style.pointerEvents = 'none';
+            }
+        }
+
+        function renderStoryline(nodes) {
             const container = document.getElementById('storyline-container');
             const svgElement = document.getElementById('storyline-connector-svg');
             const centerLine = document.querySelector('.storyline-center-line');
@@ -476,40 +560,175 @@
             if (centerLine) container.appendChild(centerLine);
             if (svgElement) container.appendChild(svgElement);
 
-            // 横向平铺，圆圈在上，标题和内容在下
-            container.style.display = 'flex';
-            container.style.flexDirection = 'row';
-            container.style.justifyContent = 'flex-start';
-            container.style.alignItems = 'flex-end';
             nodes.forEach((node, index) => {
+                const isRight = index % 2 === 1;
+                const alignmentClass = 'storyline-item ' + (isRight ? 'is-right' : 'is-left');
+                const actionBtnDiv = isRight
+                    ? `<div class="absolute top-2 right-2 flex space-x-2">
+                        <button onclick="openEditModal('${node.id}')" class="action-btn rounded-full bg-blue-500 hover:bg-blue-600 text-white shadow-md p-2 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-300" title="编辑">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.389-8.379-2.83-2.828z" />
+                            </svg>
+                        </button>
+                        <button onclick="deleteNode('${node.id}')" class="action-btn rounded-full bg-red-500 hover:bg-red-600 text-white shadow-md p-2 transition-colors focus:outline-none focus:ring-2 focus:ring-red-300" title="删除">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    </div>`
+                    : `<div class="absolute top-2 left-2 flex space-x-2">
+                        <button onclick="openEditModal('${node.id}')" class="action-btn rounded-full bg-blue-500 hover:bg-blue-600 text-white shadow-md p-2 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-300" title="编辑">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.389-8.379-2.83-2.828z" />
+                            </svg>
+                        </button>
+                        <button onclick="deleteNode('${node.id}')" class="action-btn rounded-full bg-red-500 hover:bg-red-600 text-white shadow-md p-2 transition-colors focus:outline-none focus:ring-2 focus:ring-red-300" title="删除">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    </div>`;
+
+                // 优先显示 avatar_image，其次 original_image，再次 image 字段
                 let imgSrc = node.avatar_image || node.original_image || node.image || 'https://placehold.co/100x100';
+
                 const html = `
-                    <div class="storyline-item" style="display:flex;flex-direction:column;align-items:center;margin:0 0px;position:relative;">
-                        <div style="position:absolute;top:-45px;left:50%;transform:translateX(-50%);z-index:20;display:flex;gap:8px;">
-                            <button onclick="openEditModal('${node.id}')" class="action-btn rounded-full bg-blue-500 hover:bg-blue-600 text-white shadow-md p-2 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-300" title="编辑" style="box-shadow:0 2px 8px #2563eb;z-index:21;">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                    <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.389-8.379-2.83-2.828z" />
-                                </svg>
-                            </button>
-                            <button onclick="deleteNode('${node.id}')" class="action-btn rounded-full bg-red-500 hover:bg-red-600 text-white shadow-md p-2 transition-colors focus:outline-none focus:ring-2 focus:ring-red-300" title="删除" style="box-shadow:0 2px 8px #ef4444;z-index:21;">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
-                                </svg>
-                            </button>
+                    <div class="${alignmentClass} flex items-center" id="node-${node.id}">
+                        <div class="relative w-full">
+                            <div class="bg-white rounded-lg p-6 shadow-lg">
+                                <div class="mb-2">
+                                    <span class="font-semibold text-lg text-gray-800">${node.title}</span>
+                                </div>
+                                <div class="storyline-divider" style="background-color: ${node.color};"></div>
+                                <p class="mt-2 text-gray-600 text-left">${node.content}</p>
+                                ${actionBtnDiv}
+                            </div>
                         </div>
-                        <div class="storyline-dot" style="border-color: ${node.color};margin-bottom:30px;z-index:10;cursor:pointer;" id="dot-${node.id}" onclick="window.location.href='/story?uuid=${node.id}'">
+                        <div class="storyline-dot" style="border-color: ${node.color};" id="dot-${node.id}">
                             <img src="${imgSrc}" alt="Node Icon" style="width:114px;height:114px;object-fit:cover;border-radius:9999px;cursor:pointer;" 
                                 data-preview-src="${node.original_image || imgSrc}"
                             >
                         </div>
-                        <div style="text-align:center;">
-                            <span class="font-semibold text-lg text-gray-800">${node.title}</span>
-                            <div class="storyline-divider" style="background-color: ${node.color};margin:8px 0;"></div>
-                            <p class="mt-2 text-gray-600" style="margin:0;">${node.content}</p>
-                        </div>
                     </div>
                 `;
                 container.innerHTML += html;
+            });
+            // 绑定全局关闭事件
+            ensureImagePreviewModal();
+            const modalEl = document.getElementById('image-preview-modal');
+            if (modalEl) {
+                modalEl.onmouseenter = null;
+                modalEl.onmouseleave = hideImagePreview;
+                modalEl.onclick = hideImagePreview;
+            }
+            // 挂载全局方法
+            window.showImagePreview = showImagePreview;
+            window.hideImagePreview = hideImagePreview;
+
+            // 只在按下时显示大图，松开或移开时消失
+            document.querySelectorAll('.storyline-dot img').forEach(img => {
+                img.addEventListener('mousedown', e => {
+                    showImagePreview(img.getAttribute('data-preview-src'));
+                });
+            });
+            // 保证函数体正常闭合，无多余括号
+            // 绑定全局关闭事件
+            ensureImagePreviewModal();
+            // 挂载全局方法
+            window.showImagePreview = showImagePreview;
+            window.hideImagePreview = hideImagePreview;
+        }
+
+        // Renders the storyline connector lines
+        function renderConnectors(nodes) {
+            const svg = document.getElementById('storyline-connector-svg');
+            if (!svg) return;
+            // Clear existing lines
+            svg.innerHTML = '';
+            if (nodes.length <= 1) return;
+            // Always get up-to-date bounding rect (after scaling)
+            const rect = svg.parentElement.getBoundingClientRect();
+            // 保持 desktop 和 mobile 坐标系一致，全部用缩放后的坐标
+            svg.setAttribute('width', rect.width);
+            svg.setAttribute('height', rect.height);
+            let dotRadius = 60;
+            const gap = 15;
+            for (let i = 0; i < nodes.length - 1; i++) {
+                const currentNodeId = nodes[i].id;
+                const nextNodeId = nodes[i + 1].id;
+                const currentDot = document.getElementById(`dot-${currentNodeId}`);
+                const nextDot = document.getElementById(`dot-${nextNodeId}`);
+                if (currentDot && nextDot) {
+                    let currentRect = currentDot.getBoundingClientRect();
+                    let nextRect = nextDot.getBoundingClientRect();
+                    let rectLeft = rect.left;
+                    let rectTop = rect.top;
+                    let scale = 1;
+                    if (window.innerWidth < 640) {
+                        scale = MOBILE_SCALE;
+                        rectLeft = rect.left / scale;
+                        rectTop = rect.top / scale;
+                        currentRect = {
+                            left: (currentRect.left + window.scrollX) / scale,
+                            top: (currentRect.top + window.scrollY) / scale,
+                            width: currentRect.width / scale,
+                            height: currentRect.height / scale
+                        };
+                        nextRect = {
+                            left: (nextRect.left + window.scrollX) / scale,
+                            top: (nextRect.top + window.scrollY) / scale,
+                            width: nextRect.width / scale,
+                            height: nextRect.height / scale
+                        };
+                    }
+                    const currentCenterX = currentRect.left + currentRect.width / 2 - rectLeft;
+                    const currentCenterY = currentRect.top + currentRect.height / 2 - rectTop;
+                    const nextCenterX = nextRect.left + nextRect.width / 2 - rectLeft;
+                    const nextCenterY = nextRect.top + nextRect.height / 2 - rectTop;
+                    // Calculate the distance and angle between the two centers
+                    const dx = nextCenterX - currentCenterX;
+                    const dy = nextCenterY - currentCenterY;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    const lineColor = nodes[i + 1].color;
+                    //console.log(`Drawing line from ${currentNodeId} to ${nextNodeId} with color ${lineColor}`);
+                    //console.log(`Current distance: (${distance}), dotRadius:(${dotRadius}),  gap: (${gap})`);
+
+                    if (distance > 0) {
+                        const unitX = dx / distance;
+                        const unitY = dy / distance;
+                        const startX = currentCenterX + unitX * (dotRadius + gap);
+                        const startY = currentCenterY + unitY * (dotRadius + gap);
+                        const endX = nextCenterX - unitX * (dotRadius + gap);
+                        const endY = nextCenterY - unitY * (dotRadius + gap);
+                        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                        line.setAttribute('x1', startX);
+                        line.setAttribute('y1', startY);
+                        line.setAttribute('x2', endX);
+                        line.setAttribute('y2', endY);
+                        line.setAttribute('stroke', lineColor);
+                        line.setAttribute('stroke-width', '4');
+                        line.setAttribute('stroke-linecap', 'round');
+                        line.setAttribute('stroke-dasharray', '4,16');
+                        svg.appendChild(line);
+                    }
+                }
+            }
+        }
+
+        // --- Mobile/resize fix: use ResizeObserver and orientationchange to redraw connectors ---
+        function setupConnectorObservers() {
+            const container = document.getElementById('storyline-container');
+            if (!container) return;
+            // Use ResizeObserver for container size changes (including mobile scaling)
+            if (window.ResizeObserver) {
+                const ro = new ResizeObserver(() => {
+                    renderConnectors(nodesData);
+                });
+                ro.observe(container);
+            }
+            // Redraw on orientation change
+            window.addEventListener('orientationchange', () => {
+                setTimeout(() => renderConnectors(nodesData), 300);
             });
         }
 
@@ -518,7 +737,7 @@
         // Add a new node
         async function addNode(nodeData) {
             try {
-                const response = await fetch(API_URL, {
+                const response = await fetch(apiUrlWithUUID(), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(nodeData)
@@ -535,7 +754,7 @@
         // Update a node
         async function updateNode(nodeId, nodeData) {
             try {
-                const response = await fetch(`${API_URL}/${nodeId}`, {
+                const response = await fetch(apiUrlWithUUID(nodeId), {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(nodeData)
@@ -556,7 +775,7 @@
                 return;
             }
             try {
-                const response = await fetch(`${API_URL}/${nodeId}`, {
+                const response = await fetch(apiUrlWithUUID(nodeId), {
                     method: 'DELETE'
                 });
                 if (!response.ok) {
@@ -571,7 +790,7 @@
         // Get node data for editing
         async function getNodeData(nodeId) {
             try {
-                const response = await fetch(`${API_URL}/${nodeId}`);
+                const response = await fetch(apiUrlWithUUID(nodeId));
                 if (!response.ok) {
                     throw new Error('Node data not found');
                 }
@@ -604,25 +823,24 @@
 
         async function openEditModal(nodeId) {
             const modal = document.getElementById('node-modal');
-            let node = nodesData.find(n => n.id === nodeId);
+            const node = await getNodeData(nodeId);
             if (!node) {
-                node = await getNodeData(nodeId);
-            }
-            if (!node) {
-                await showCustomConfirm('未找到该节点数据，无法编辑。请先添加自己的节点。');
+                await showCustomConfirm('该节点为示例数据，无法编辑。请先添加自己的节点。');
                 return;
             }
+
             document.getElementById('modal-title').textContent = '修改节点';
             document.getElementById('title').value = node.title;
             document.getElementById('content').value = node.content;
             document.getElementById('color').value = node.color;
             editingNodeId = nodeId;
+
             modal.classList.add('active');
         }
 
         async function fetchHeaderFooterData() {
             try {
-                const response = await fetch(`${API_URL}/info`);
+                const response = await fetch(apiUrlWithUUID('info'));
                 if (!response.ok) return { header: {}, footer: {} };
                 return await response.json();
             } catch (e) {
@@ -767,7 +985,7 @@
                 footer: data.footer
             };
             try {
-                await fetch(`${API_URL}/info`, {
+                await fetch(apiUrlWithUUID('info'), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
@@ -787,7 +1005,7 @@
                 footer: { footer_text: footerText }
             };
             try {
-                await fetch(`${API_URL}/info`, {
+                await fetch(apiUrlWithUUID('info'), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
@@ -797,10 +1015,19 @@
             closeModal('footer-modal');
         });
 
+
+        // Re-render connectors on window resize
+        window.addEventListener('resize', () => {
+            setTimeout(() => renderConnectors(nodesData), 100);
+        });
+
         // Initial fetches on page load
         document.addEventListener('DOMContentLoaded', () => {
             fetchAndRenderHeaderFooter();
             fetchAndRenderNodes();
+            setupConnectorObservers();
+            // Extra redraw after 500ms for mobile scaling quirks
+            setTimeout(() => renderConnectors(nodesData), 500);
         });
     </script>
 
