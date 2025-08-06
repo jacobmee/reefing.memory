@@ -6,16 +6,12 @@ from flask_cors import CORS
 from common import logger
 import os
 
-
-
 app = Flask(__name__)
-data_store = ChartDataStore()
-story_store = None  # Remove global instance for story, use per-request
+chart_store = ChartDataStore()
 summary_store = SummaryDataStore()
 
 # Enable CORS for the app
 CORS(app)
-
 
 #############################################
 ##           Summary Functions
@@ -26,7 +22,6 @@ def get_summary_items():
     items = summary_store.get_summary_nodes()
     return jsonify(items)
 
-
 # Add a summary item (with image upload)
 @app.route("/api/summary", methods=["POST"])
 def add_summary_item():
@@ -34,7 +29,19 @@ def add_summary_item():
     item = summary_store.add_summary_node(new_item_data)
     return jsonify(item), 201
 
-
+@app.route('/api/summary/order', methods=['POST'])
+def set_summary_order():
+    data = request.get_json()
+    order_list = data.get('order', [])
+    if not isinstance(order_list, list):
+        return jsonify({'error': 'Invalid order format'}), 400
+    try:
+        from app import summary_store  # 或根据你的实际导入
+        summary_store.set_summary_order(order_list)
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
 # API endpoint to update an existing summary item
 @app.route("/api/summary/<item_id>", methods=["PUT"])
 def update_summary_item(item_id):
@@ -75,6 +82,10 @@ def get_summary_info():
 ##           Story Functions
 #############################################
 # API endpoint to get all story nodes
+@app.route("/story")
+def story():
+    return render_template("story.html")
+
 @app.route("/api/story", methods=["GET"])
 def get_story_nodes():
     uuid = request.args.get("uuid")
@@ -166,7 +177,13 @@ def save_info():
 #############################################
 ##                  Dashboard Functions
 #############################################
-
+@app.route("/dashboard")
+def dashboard():
+    data = chart_store.load_static_data()
+    realtime_data = chart_store.load_realtime_data()
+    return render_template(
+        "dashboard.html", chart_data=data, realtime_data=realtime_data
+    )
 
 # Add endpoint for saving static data
 @app.route("/add_static_data", methods=["POST"])
@@ -175,7 +192,7 @@ def add_static_data():
         data = request.get_json()
         if not data:
             return jsonify(success=False, error="No data received"), 400
-        data_store.save_static_data(data)
+        chart_store.save_static_data(data)
         return jsonify(success=True)
     except Exception as e:
         return jsonify(success=False, error=str(e)), 500
@@ -185,24 +202,9 @@ def add_static_data():
 ##                  Main Entry Functions
 #############################################
 
-
 @app.route("/")
 def index():
     return render_template("index.html")
-
-
-@app.route("/story")
-def story():
-    return render_template("story.html")
-
-
-@app.route("/dashboard")
-def dashboard():
-    data = data_store.load_static_data()
-    realtime_data = data_store.load_realtime_data()
-    return render_template(
-        "dashboard.html", chart_data=data, realtime_data=realtime_data
-    )
 
 
 if __name__ == "__main__":

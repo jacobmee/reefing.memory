@@ -251,7 +251,22 @@ class SummaryDataStore:
 
     def get_summary_nodes(self):
         data = self.load_data()
+        logger.debug(f"Summary nodes: {data.get('summary_nodes', {})}")
         return data.get("summary_nodes", {})
+
+    def set_summary_order(self, order_list):
+        """
+        根据传入的节点 id 顺序列表，更新每个节点的 order 字段并保存。
+        """
+        if not isinstance(order_list, list):
+            raise ValueError("order_list must be a list of node ids")
+        nodes = self.get_summary_nodes()
+        # 只更新存在的节点
+        for idx, node_id in enumerate(order_list):
+            if node_id in nodes:
+                nodes[node_id]['order'] = idx
+        self.set_summary_nodes(nodes)
+        
 
     def set_summary_nodes(self, nodes):
         for node_id, node in nodes.items():
@@ -266,8 +281,14 @@ class SummaryDataStore:
             for k in list(node.keys()):
                 if k.endswith("base64"):
                     node.pop(k)
+        # 按 order 排序 nodes
+        sorted_items = sorted(
+            nodes.items(),
+            key=lambda x: x[1].get("order", 99999)
+        )
+        sorted_nodes = {k: v for k, v in sorted_items}
         data = self.load_data()
-        data["summary_nodes"] = nodes
+        data["summary_nodes"] = sorted_nodes
         self.save_data(data)
 
     def get_info(self):

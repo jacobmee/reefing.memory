@@ -452,7 +452,7 @@
                     throw new Error('Network response was not ok');
                 }
                 let data = await response.json();
-                // 如果不是数组，尝试转换
+                // 如果不是数组，尝试转换并按 order 排序
                 if (!Array.isArray(data)) {
                     if (data && typeof data === 'object') {
                         data = Object.values(data);
@@ -460,6 +460,12 @@
                         data = [];
                     }
                 }
+                // 按 order 排序（无 order 的放最后）
+                data = data.sort((a, b) => {
+                    const ao = (a.order !== undefined) ? a.order : 99999;
+                    const bo = (b.order !== undefined) ? b.order : 99999;
+                    return ao - bo;
+                });
                 nodesData = data;
                 renderSummary(nodesData);
             } catch (error) {
@@ -482,9 +488,10 @@
             container.style.justifyContent = 'flex-start';
             container.style.alignItems = 'flex-end';
             nodes.forEach((node, index) => {
+                console.info(`Rendering node ${index}:`, node);
                 let imgSrc = node.avatar_image || node.original_image || node.image || 'https://placehold.co/100x100';
                 const html = `
-                    <div class="storyline-item" style="display:flex;flex-direction:column;align-items:center;margin:0 0px;position:relative;">
+                    <div class="storyline-item" style="display:flex;flex-direction:column;align-items:center;margin:0 0px;position:relative;" draggable="true" data-index="${index}" data-id="${node.id}">
                         <div style="position:absolute;top:-45px;left:50%;transform:translateX(-50%);z-index:20;display:flex;gap:8px;">
                             <button onclick="openEditModal('${node.id}')" class="action-btn rounded-full bg-blue-500 hover:bg-blue-600 text-white shadow-md p-2 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-300" title="编辑" style="box-shadow:0 2px 8px #2563eb;z-index:21;">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -511,6 +518,60 @@
                 `;
                 container.innerHTML += html;
             });
+            setupDragAndDrop(container);
+        }
+
+        // 拖拽排序实现
+        function setupDragAndDrop(container) {
+            let dragSrcEl = null;
+            container.querySelectorAll('.storyline-item').forEach(item => {
+                item.addEventListener('dragstart', function (e) {
+                    dragSrcEl = this;
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', this.dataset.index);
+                    this.style.opacity = '0.4';
+                });
+                item.addEventListener('dragend', function (e) {
+                    this.style.opacity = '1';
+                });
+                item.addEventListener('dragover', function (e) {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                });
+                item.addEventListener('drop', function (e) {
+                    e.stopPropagation();
+                    if (dragSrcEl !== this) {
+                        const from = parseInt(dragSrcEl.dataset.index);
+                        const to = parseInt(this.dataset.index);
+                        moveNode(from, to);
+                    }
+                    return false;
+                });
+            });
+        }
+
+        // 移动节点并保存顺序
+        function moveNode(from, to) {
+            if (from === to) return;
+            const arr = [...nodesData];
+            const moved = arr.splice(from, 1)[0];
+            arr.splice(to, 0, moved);
+            nodesData = arr;
+            renderSummary(nodesData);
+            saveNodeOrder(nodesData.map(n => n.id));
+        }
+
+        // 保存顺序到后端
+        async function saveNodeOrder(order) {
+            try {
+                await fetch(`${API_URL}/order`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ order })
+                });
+            } catch (e) {
+                console.error('保存顺序失败', e);
+            }
         }
 
         // --- CRUD Operations ---
