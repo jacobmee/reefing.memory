@@ -524,7 +524,30 @@
         // 拖拽排序实现
         function setupDragAndDrop(container) {
             let dragSrcEl = null;
-            container.querySelectorAll('.storyline-item').forEach(item => {
+            let dropIndex = null;
+            // 清理所有 drag-indicator
+            function removeDragIndicators() {
+                Array.from(container.querySelectorAll('.drag-indicator')).forEach(ind => ind.parentNode.removeChild(ind));
+                dropIndex = null;
+            }
+            // 创建黑线指示器（flex子元素）
+            function createDragIndicator() {
+                const div = document.createElement('div');
+                div.className = 'drag-indicator';
+                div.style.width = '8px';
+                div.style.height = '120px';
+                div.style.background = 'black';
+                div.style.borderRadius = '4px';
+                div.style.position = 'absolute';
+                div.style.top = '0';
+                div.style.left = '0';
+                div.style.pointerEvents = 'none';
+                div.style.zIndex = '99';
+                return div;
+            }
+            // 监听每个节点
+            const items = Array.from(container.querySelectorAll('.storyline-item'));
+            items.forEach((item, idx) => {
                 item.addEventListener('dragstart', function (e) {
                     dragSrcEl = this;
                     e.dataTransfer.effectAllowed = 'move';
@@ -533,20 +556,76 @@
                 });
                 item.addEventListener('dragend', function (e) {
                     this.style.opacity = '1';
+                    removeDragIndicators();
                 });
                 item.addEventListener('dragover', function (e) {
                     e.preventDefault();
                     e.dataTransfer.dropEffect = 'move';
+                    // 计算鼠标在节点的左/右侧
+                    const rect = item.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    let insertBefore = x < rect.width / 2;
+                    const indicators = Array.from(container.querySelectorAll('.drag-indicator'));
+                    let needInsert = true;
+                    if (indicators.length === 1) {
+                        // drag-indicator 已在正确位置则不插入
+                        if ((insertBefore && indicators[0].nextSibling === item) ||
+                            (!insertBefore && indicators[0].previousSibling === item)) {
+                            needInsert = false;
+                        }
+                    }
+                    if (needInsert) {
+                        removeDragIndicators();
+                        const indicator = createDragIndicator();
+                        // 绝对定位到插入点
+                        const parentRect = container.getBoundingClientRect();
+                        indicator.style.left = (insertBefore ? rect.left - parentRect.left - 4 : rect.right - parentRect.left - 4) + 'px';
+                        indicator.style.top = (rect.top - parentRect.top) + 'px';
+                        container.appendChild(indicator);
+                        dropIndex = insertBefore ? idx : idx + 1;
+                    }
+                });
+                item.addEventListener('dragleave', function (e) {
+                    removeDragIndicators();
                 });
                 item.addEventListener('drop', function (e) {
                     e.stopPropagation();
-                    if (dragSrcEl !== this) {
+                    if (dragSrcEl && dropIndex !== null) {
                         const from = parseInt(dragSrcEl.dataset.index);
-                        const to = parseInt(this.dataset.index);
-                        moveNode(from, to);
+                        moveNode(from, dropIndex > from ? dropIndex - 1 : dropIndex);
                     }
+                    removeDragIndicators();
                     return false;
                 });
+            });
+            // 支持拖到最后一个节点后面
+            container.addEventListener('dragover', function (e) {
+                const items = Array.from(container.querySelectorAll('.storyline-item'));
+                if (items.length === 0) return;
+                const rect = container.getBoundingClientRect();
+                // 鼠标在容器最右侧空白区
+                if (e.clientX > rect.right - 30) {
+                    const indicators = Array.from(container.querySelectorAll('.drag-indicator'));
+                    let needInsert = true;
+                    if (indicators.length === 1 && indicators[0].nextSibling === null) {
+                        needInsert = false;
+                    }
+                    if (needInsert) {
+                        removeDragIndicators();
+                        const indicator = createDragIndicator();
+                        indicator.style.left = (rect.right - rect.left - 4) + 'px';
+                        indicator.style.top = '0px';
+                        container.appendChild(indicator);
+                        dropIndex = items.length;
+                    }
+                }
+            });
+            container.addEventListener('drop', function (e) {
+                if (dragSrcEl && dropIndex !== null) {
+                    const from = parseInt(dragSrcEl.dataset.index);
+                    moveNode(from, dropIndex > from ? dropIndex - 1 : dropIndex);
+                }
+                removeDragIndicators();
             });
         }
 
