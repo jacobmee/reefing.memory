@@ -96,7 +96,7 @@
             pointer-events: none;
             transition: opacity 0.2s;
         }
-        .timeline-item:hover .action-btn,
+        .storyline-item:hover .action-btn,
         .action-btn:hover {
             opacity: 1;
             pointer-events: auto;
@@ -135,33 +135,33 @@
         #footer-text {
             color: #222 !important;
         }
-        /* Timeline styles */
-        .timeline {
+        /* Storyline styles */
+        .storyline {
             position: relative;
             overflow: visible !important;
         }
-        .timeline-item {
+        .storyline-item {
             position: relative;
             padding-top: 0;
             padding-bottom: 0;
             padding-left: 0;
             padding-right: 0;
             width: 50%;
-            z-index: 2; /* Ensure timeline items are above the connector lines */
+            z-index: 2; /* Ensure storyline items are above the connector lines */
         }
-        .timeline-item.is-right {
+        .storyline-item.is-right {
             margin-left: 50%;
             padding-left: 5.5rem;
             text-align: left;
             transform: translateX(10%);
         }
-        .timeline-item.is-left {
+        .storyline-item.is-left {
             margin-right: 50%;
             padding-right: 5.5rem;
             text-align: right;
             transform: translateX(-10%);
         }
-        .timeline-dot {
+        .storyline-dot {
             position: absolute;
             width: 120px;
             height: 120px;
@@ -177,15 +177,15 @@
             border: 2px solid;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
-        .timeline-item.is-left .timeline-dot {
+        .storyline-item.is-left .storyline-dot {
             right: 20px;
             transform: translateY(-50%) translateX(30%);
         }
-        .timeline-item.is-right .timeline-dot {
+        .storyline-item.is-right .storyline-dot {
             left: 20px;
             transform: translateY(-50%) translateX(-30%);
         }
-        .timeline-divider {
+        .storyline-divider {
             height: 2px;
             width: 100%;
             margin: 0.5rem 0;
@@ -203,7 +203,7 @@
             display: flex;
         }
         /* SVG connector line styles */
-        .timeline-connector {
+        .storyline-connector {
             position: absolute;
             top: 0;
             left: 0;
@@ -213,7 +213,7 @@
             min-height: 100%;
             pointer-events: none;
             overflow: visible;
-            z-index: 1; /* Ensure connectors are behind the timeline items */
+            z-index: 1; /* Ensure connectors are behind the storyline items */
         }
         /* Custom confirmation modal styles */
         #confirm-modal {
@@ -269,10 +269,10 @@
                 </svg>
             </button>
         </div>
-        <div id="timeline-container" class="timeline relative max-w-4xl mx-auto">
+        <div id="storyline-container" class="storyline relative max-w-4xl mx-auto">
             <!-- SVG container for drawing the connector lines -->
-            <svg id="timeline-connector-svg" class="timeline-connector"></svg>
-            <!-- Timeline items will be rendered here by JavaScript -->
+            <svg id="storyline-connector-svg" class="storyline-connector"></svg>
+            <!-- Storyline items will be rendered here by JavaScript -->
         </div>
     </main>
 
@@ -290,7 +290,7 @@
 
     <!-- Modals for editing -->
 
-    <!-- Modal for adding/editing a timeline node -->
+    <!-- Modal for adding/editing a storyline node -->
     <div id="node-modal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-50">
         <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md">
             <h2 id="modal-title" class="text-2xl font-bold mb-4">增加新节点</h2>
@@ -417,10 +417,10 @@
             "#B3D9FF"  // Sky Blue
         ];
 
-        const API_URL = 'http://192.168.0.28:5003/api/timeline';
+        const API_URL = 'http://192.168.0.28:5003/api/storyline';
         let editingNodeId = null;
 
-        // Fetch and render timeline nodes
+        // Fetch and render storyline nodes
         async function fetchAndRenderNodes() {
             try {
                 const response = await fetch(API_URL);
@@ -428,19 +428,19 @@
                     throw new Error('Network response was not ok');
                 }
                 nodesData = await response.json(); // Store data in a global variable
-                renderTimeline(nodesData);
+                renderStoryline(nodesData);
                 // Call renderConnectors after a short delay to allow for DOM rendering
                 setTimeout(() => {
                     renderConnectors(nodesData);
                 }, 100);
             } catch (error) {
-                console.error("Failed to fetch timeline nodes:", error);
-                renderTimeline([]); // Do not display any nodes
+                console.error("Failed to fetch storyline nodes:", error);
+                renderStoryline([]); // Do not display any nodes
                 renderConnectors([]); // Do not display any connector lines
             }
         }
         
-        // Render the timeline UI
+        // Render the storyline UI
         // 大图预览弹窗DOM
         function ensureImagePreviewModal() {
             if (document.getElementById('image-preview-modal')) return;
@@ -484,17 +484,17 @@
             }
         }
 
-        function renderTimeline(nodes) {
-            const container = document.getElementById('timeline-container');
-            const svgElement = document.getElementById('timeline-connector-svg');
-            const centerLine = document.querySelector('.timeline-center-line');
+        function renderStoryline(nodes) {
+            const container = document.getElementById('storyline-container');
+            const svgElement = document.getElementById('storyline-connector-svg');
+            const centerLine = document.querySelector('.storyline-center-line');
             container.innerHTML = '';
             if (centerLine) container.appendChild(centerLine);
             if (svgElement) container.appendChild(svgElement);
 
             nodes.forEach((node, index) => {
                 const isRight = index % 2 === 1;
-                const alignmentClass = 'timeline-item ' + (isRight ? 'is-right' : 'is-left');
+                const alignmentClass = 'storyline-item ' + (isRight ? 'is-right' : 'is-left');
                 const actionBtnDiv = isRight
                   ? `<div class="absolute top-2 right-2 flex space-x-2">
                         <button onclick="openEditModal('${node.id}')" class="action-btn rounded-full bg-blue-500 hover:bg-blue-600 text-white shadow-md p-2 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-300" title="编辑">
@@ -531,12 +531,12 @@
                                 <div class="mb-2">
                                     <span class="font-semibold text-lg text-gray-800">${node.title}</span>
                                 </div>
-                                <div class="timeline-divider" style="background-color: ${node.color};"></div>
+                                <div class="storyline-divider" style="background-color: ${node.color};"></div>
                                 <p class="mt-2 text-gray-600 text-left">${node.content}</p>
                                 ${actionBtnDiv}
                             </div>
                         </div>
-                        <div class="timeline-dot" style="border-color: ${node.color};" id="dot-${node.id}">
+                        <div class="storyline-dot" style="border-color: ${node.color};" id="dot-${node.id}">
                             <img src="${imgSrc}" alt="Node Icon" style="width:114px;height:114px;object-fit:cover;border-radius:9999px;cursor:pointer;" 
                                 data-preview-src="${node.original_image || imgSrc}"
                             >
@@ -558,7 +558,7 @@
             window.hideImagePreview = hideImagePreview;
 
             // 只在按下时显示大图，松开或移开时消失
-            document.querySelectorAll('.timeline-dot img').forEach(img => {
+            document.querySelectorAll('.storyline-dot img').forEach(img => {
                 img.addEventListener('mousedown', e => {
                     showImagePreview(img.getAttribute('data-preview-src'));
                 });
@@ -571,9 +571,9 @@
             window.hideImagePreview = hideImagePreview;
         }
         
-        // Renders the timeline connector lines
+        // Renders the storyline connector lines
         function renderConnectors(nodes) {
-            const svg = document.getElementById('timeline-connector-svg');
+            const svg = document.getElementById('storyline-connector-svg');
             if (!svg) return;
             // Clear existing lines
             svg.innerHTML = '';
@@ -649,7 +649,7 @@
 
         // --- Mobile/resize fix: use ResizeObserver and orientationchange to redraw connectors ---
         function setupConnectorObservers() {
-            const container = document.getElementById('timeline-container');
+            const container = document.getElementById('storyline-container');
             if (!container) return;
             // Use ResizeObserver for container size changes (including mobile scaling)
             if (window.ResizeObserver) {

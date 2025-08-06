@@ -5,10 +5,8 @@ import os
 import requests
 
 class ChartDataStore:
-    def __init__(self, filename=None):
-        if filename is None:
-            filename = os.path.join(os.path.dirname(__file__), 'data.json')
-        self.filename = filename
+    def __init__(self):
+        self.filename = os.path.join(os.path.dirname(__file__), 'data', 'data.json')
         
 
     def load_static_data(self):
