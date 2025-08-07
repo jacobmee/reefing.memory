@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN"></html>
 <head>
     <meta charset="UTF-8">
     <title>Reefing Memory</title>
@@ -9,6 +9,57 @@
     <link href="https://fonts.googleapis.com/css?family=Lato:300,700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
+        // Custom modal replacement for alert() and confirm()
+        function showCustomConfirm(message, title = '确认操作') {
+            return new Promise((resolve) => {
+                let modal = document.getElementById('confirm-modal');
+                if (!modal) {
+                    modal = document.createElement('div');
+                    modal.id = 'confirm-modal';
+                    modal.className = 'modal';
+                    modal.innerHTML = `
+                        <div style="background:#fff;padding:24px 32px;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,0.18);min-width:320px;max-width:95vw;">
+                            <h2 id="confirm-title" style="font-size:1.2em;font-weight:bold;margin-bottom:12px;">确认</h2>
+                            <p id="confirm-message" style="margin-bottom:18px;color:#444;">你确定要执行此操作吗？</p>
+                            <div style="display:flex;justify-content:flex-end;gap:12px;">
+                                <button type="button" id="confirm-cancel" style="padding:8px 18px;background:#eee;color:#333;border:none;border-radius:6px;font-size:1em;cursor:pointer;">取消</button>
+                                <button type="button" id="confirm-ok" style="padding:8px 18px;background:#f87171;color:#fff;border:none;border-radius:6px;font-size:1em;cursor:pointer;">确定</button>
+                            </div>
+                        </div>`;
+                    document.body.appendChild(modal);
+                }
+                const titleEl = modal.querySelector('#confirm-title');
+                const messageEl = modal.querySelector('#confirm-message');
+                const okBtn = modal.querySelector('#confirm-ok');
+                const cancelBtn = modal.querySelector('#confirm-cancel');
+                titleEl.textContent = title;
+                messageEl.textContent = message;
+                modal.style.display = 'flex';
+                modal.style.position = 'fixed';
+                modal.style.left = '0';
+                modal.style.top = '0';
+                modal.style.width = '100vw';
+                modal.style.height = '100vh';
+                modal.style.background = 'rgba(0,0,0,0.25)';
+                modal.style.zIndex = '9999';
+                modal.style.justifyContent = 'center';
+                modal.style.alignItems = 'center';
+                const onOk = () => {
+                    modal.style.display = 'none';
+                    okBtn.removeEventListener('click', onOk);
+                    cancelBtn.removeEventListener('click', onCancel);
+                    resolve(true);
+                };
+                const onCancel = () => {
+                    modal.style.display = 'none';
+                    okBtn.removeEventListener('click', onOk);
+                    cancelBtn.removeEventListener('click', onCancel);
+                    resolve(false);
+                };
+                okBtn.addEventListener('click', onOk);
+                cancelBtn.addEventListener('click', onCancel);
+            });
+        }
         // Auto-refresh page every hour (3600000 ms)
         setTimeout(function() { window.location.reload(); }, 3600000);
     </script>
@@ -272,13 +323,41 @@
 </head>
 <body>
     <div class="charts-container">
+        <div id="realtimeSourceModal" style="display:none;position:fixed;z-index:1001;left:0;top:0;width:100vw;height:100vh;background:rgba(0,0,0,0.25);justify-content:center;align-items:center;">
+            <div style="background:#fff;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,0.18);padding:24px 32px;min-width:320px;max-width:95vw;position:relative;">
+                <button id="closeRealtimeSourceModal" style="position:absolute;top:12px;right:12px;background:none;border:none;font-size:1.5em;color:#888;cursor:pointer;">&times;</button>
+                <h4 style="margin-bottom:16px;">编辑实时数据源</h4>
+                <form id="realtimeSourceForm" style="display:flex;flex-direction:column;gap:16px;">
+                    <input id="realtimeSourceInput" name="realtimesource" type="text" style="font-size:1em;padding:8px 12px 8px 12px;border-radius:6px;border:1px solid #ccc;width:calc(100% - 4px);box-sizing:border-box;" />
+                    <button type="submit" style="margin-top:12px;background:#2563eb;color:#fff;border:none;border-radius:6px;font-size:1.1em;padding:8px 32px;cursor:pointer;width:fit-content;align-self:center;">保存</button>
+                </form>
+            </div>
+        </div>
+        <!-- 配置弹窗 -->
+        <div id="configModal" style="display:none;position:fixed;z-index:1002;left:0;top:0;width:100vw;height:100vh;background:rgba(0,0,0,0.25);justify-content:center;align-items:center;">
+            <div style="background:#fff;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,0.18);padding:24px 32px;min-width:320px;max-width:95vw;position:relative;display:flex;flex-direction:column;gap:24px;">
+                <button id="closeConfigModal" style="position:absolute;top:12px;right:12px;background:none;border:none;font-size:1.5em;color:#888;cursor:pointer;">&times;</button>
+                <h4 style="margin-bottom:8px;">Dashboard 配置</h4>
+                <button id="disableDashboardBtn" style="background:#f87171;color:#fff;border:none;border-radius:6px;padding:8px 18px;cursor:pointer;font-size:1em;box-shadow:0 2px 8px #f87171;">
+                    禁用 Dashboard
+                </button>
+                <button id="editRealtimeSourceBtn" style="background:#2563eb;color:#fff;border:none;border-radius:6px;padding:8px 18px;cursor:pointer;font-size:1em;box-shadow:0 2px 8px #2563eb;">
+                    编辑实时数据源
+                </button>
+            </div>
+        </div>
         <div class="top-section">
             <div class="elements-list">
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px;">
                     <h4 style="margin:0;">Reefing Memory</h4>
-                    <button id="addEntryBtn" title="Add new entry" style="background: none; border: none; cursor: pointer; margin-left: 8px; color: #3b82f6; display: flex; align-items: center; justify-content: center; height: 1.6em; width: 1.6em; padding: 0;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-                    </button>
+                    <div style="display:flex;align-items:center;">
+                        <button id="addEntryBtn" title="Add new entry" style="background: none; border: none; cursor: pointer; color: #3b82f6; display: flex; align-items: center; justify-content: center; height: 1.6em; width: 1.6em; padding: 0;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                        </button>
+                        <button id="configBtn" title="配置" style="background: none; border: none; cursor: pointer; color: #2563eb; display: flex; align-items: center; justify-content: center; height: 1.6em; width: 1.6em; padding: 0;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+                        </button>
+                    </div>
                 </div>
                 <div id="addEntryModal" style="display:none; position:fixed; z-index:1000; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.25); justify-content:center; align-items:center;">
                     <div style="background:#fff; border-radius:8px; box-shadow:0 8px 32px rgba(0,0,0,0.18); padding:12px 24px 24px 24px; min-width:320px; max-width:95vw; position:relative;">
@@ -372,7 +451,96 @@
         </div>
     </div>
     <script>
-        
+        // --- Disable Dashboard ---
+        document.getElementById('disableDashboardBtn').onclick = function() {
+            // 关闭配置弹窗，避免弹窗重叠
+            var configModal = document.getElementById('configModal');
+            if (configModal) configModal.style.display = 'none';
+            showCustomConfirm('确定要禁用 Dashboard 吗？', '禁用 Dashboard').then(function(confirmed) {
+                if (!confirmed) return;
+                // 获取uuid参数
+                function getUUID() {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    return urlParams.get('uuid') || '';
+                }
+                const uuid = getUUID();
+                // 获取当前 info
+                fetch('/api/story/info?uuid=' + encodeURIComponent(uuid))
+                    .then(res => res.json())
+                    .then(infoData => {
+                        infoData.dashboard = false;
+                        return fetch('/api/story/info?uuid=' + encodeURIComponent(uuid), {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(infoData)
+                        });
+                    })
+                    .then(() => {
+                        // 跳转回 story.html
+                        const uuid = getUUID();
+                        window.location.href = '/story' + (uuid ? ('?uuid=' + encodeURIComponent(uuid)) : '');
+                    })
+                    .catch(() => showCustomConfirm('禁用失败，请重试。', '禁用 Dashboard'));
+            });
+        };
+
+        // --- Edit Realtime Data Source ---
+        const editBtn = document.getElementById('editRealtimeSourceBtn');
+        const modal = document.getElementById('realtimeSourceModal');
+        const closeModalBtn = document.getElementById('closeRealtimeSourceModal');
+        const form = document.getElementById('realtimeSourceForm');
+        const input = document.getElementById('realtimeSourceInput');
+
+        editBtn.onclick = function() {
+            // 获取uuid参数
+            function getUUID() {
+                const urlParams = new URLSearchParams(window.location.search);
+                return urlParams.get('uuid') || '';
+            }
+            const uuid = getUUID();
+            // 关闭配置弹窗，避免弹窗重叠
+            var configModal = document.getElementById('configModal');
+            if (configModal) configModal.style.display = 'none';
+            // 获取当前数据源
+            fetch('/dashboard/info?uuid=' + encodeURIComponent(uuid))
+                .then(res => res.json())
+                .then(infoData => {
+                    input.value = infoData.realtimesource || '';
+                    modal.style.display = 'flex';
+                });
+        };
+        closeModalBtn.onclick = function() {
+            modal.style.display = 'none';
+        };
+        modal.onclick = function(e) {
+            if (e.target === modal) modal.style.display = 'none';
+        };
+        form.onsubmit = function(e) {
+            e.preventDefault();
+            // 获取uuid参数
+            function getUUID() {
+                const urlParams = new URLSearchParams(window.location.search);
+                return urlParams.get('uuid') || '';
+            }
+            const uuid = getUUID();
+            // 获取当前 info
+            fetch('/api/story/info?uuid=' + encodeURIComponent(uuid))
+                .then(res => res.json())
+                .then(infoData => {
+                    infoData.realtimesource = input.value;
+                    return fetch('/dashboard/info?uuid=' + encodeURIComponent(uuid), {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(infoData)
+                    });
+                })
+                .then(() => {
+                    modal.style.display = 'none';
+                    window.location.reload();
+                })
+                .catch(() => alert('保存失败，请重试。'));
+        };
+
         // --- Modal logic for adding new entry ---
         // 格式化 'Mon DD' 为 YYYY-MM-DD
         function formatDateYYYYMMDD(dateStr) {
@@ -693,7 +861,13 @@
             const values = {};
             Array.from(modalElementList.children).forEach(li => {
                 const key = li.dataset.key;
-                const value = parseFloat(li.dataset.value);
+                let value = parseFloat(li.dataset.value);
+                // 按照 ELEMENTS_CONFIG 的 decimals 精度处理
+                if (ELEMENTS_CONFIG[key]) {
+                    const decimals = ELEMENTS_CONFIG[key].decimals;
+                    const factor = Math.pow(10, decimals);
+                    value = Math.round(value * factor) / factor;
+                }
                 values[key] = value;
             });
             // Compose data
@@ -1493,6 +1667,20 @@
 
         // Call update function after charts are initialized or data is loaded
         updateElementsList();
+
+        // --- 配置弹窗逻辑 ---
+        const configBtn = document.getElementById('configBtn');
+        const configModal = document.getElementById('configModal');
+        const closeConfigModal = document.getElementById('closeConfigModal');
+        configBtn.onclick = function() {
+            configModal.style.display = 'flex';
+        };
+        closeConfigModal.onclick = function() {
+            configModal.style.display = 'none';
+        };
+        configModal.onclick = function(e) {
+            if (e.target === configModal) configModal.style.display = 'none';
+        };
     </script>
 </body>
 </html>

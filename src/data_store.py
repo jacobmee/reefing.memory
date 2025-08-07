@@ -23,32 +23,66 @@ def save_node_image(node_id, image_base64):
 
 
 class ChartDataStore:
+    
     def __init__(self, uuid=None):
         if uuid:
             self.filename = os.path.join(os.path.dirname(__file__), "data", f"data_{uuid}.json")
         else:
             self.filename = os.path.join(os.path.dirname(__file__), "data", "data.json")
 
+    def get_dashboard_info(self):
+        # 只返回 realtimesource 字段，兼容 dict 和 list 文件结构
+        config = {}
+        if os.path.exists(self.filename):
+            with open(self.filename, "r") as f:
+                try:
+                    file_data = json.load(f)
+                except Exception:
+                    file_data = {}
+            if isinstance(file_data, dict):
+                config = file_data
+            else:
+                config = {}
+        return {"realtimesource": config.get("realtimesource")}
+
+    def set_dashboard_info(self, config):
+        data = {}
+        if os.path.exists(self.filename):
+            with open(self.filename, "r") as f:
+                try:
+                    data = json.load(f)
+                except Exception:
+                    data = {}
+        if "realtimesource" in config:
+            data["realtimesource"] = config["realtimesource"]
+        with open(self.filename, "w") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+
     def load_static_data(self):
         if not os.path.exists(self.filename):
             return {"labels": [], "values": []}
         with open(self.filename, "r") as f:
-            data = json.load(f)
-        # 限制最多返回25行（最后的）
+            file_data = json.load(f)
+        # 如果是 dict，提取 static data
+        data = file_data.get("data", [])
+        # 限制最多返回20行（最后的）
         if isinstance(data, list):
             data = sorted(data, key=lambda d: d.get("time", ""))
-            data = data[-20:]  # 取最后25行，顺序为从旧到新
-
+            data = data[-20:]
         return data
 
     def save_static_data(self, data):
         # Load existing data
+        realtimesource = None
         if os.path.exists(self.filename):
             with open(self.filename, "r") as f:
                 try:
-                    all_data = json.load(f)
+                    file_data = json.load(f)
                 except Exception:
-                    all_data = []
+                    file_data = []
+            # 如果是 dict，提取 realtimesource 和 static data
+            realtimesource = file_data.get("realtimesource")
+            all_data = file_data.get("data", [])
         else:
             all_data = []
         # 查找是否有同日期记录
@@ -60,11 +94,30 @@ class ChartDataStore:
                 break
         if not found:
             all_data.append(data)
-        # Save back
+        # Save back, 保留 realtimesource 字段
+        if realtimesource is not None:
+            save_obj = {"realtimesource": realtimesource, "data": all_data}
+        else:
+            save_obj = {"data": all_data}
         with open(self.filename, "w") as f:
-            json.dump(all_data, f, indent=2)
+            json.dump(save_obj, f, indent=2)
 
-    def load_realtime_data(self, url="http://reef.lan:6001/data"):
+    def load_realtime_data(self, url=None):
+        # 如果未指定 url，则尝试从 dashboard 配置读取
+        if url is None:
+            # 兼容 dict 和 list 文件结构
+            if os.path.exists(self.filename):
+                with open(self.filename, "r") as f:
+                    try:
+                        file_data = json.load(f)
+                    except Exception:
+                        file_data = {}
+                if isinstance(file_data, dict):
+                    url = file_data.get("realtimesource")
+                else:
+                    url = None
+            else:
+                url = None
         try:
             resp = requests.get(url, timeout=10)
             raw = resp.json()

@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-
 <head>
     <!-- Cropper.js CSS -->
     <link href="https://cdn.jsdelivr.net/npm/cropperjs@1.5.13/dist/cropper.min.css" rel="stylesheet" />
@@ -62,7 +61,16 @@
             }
         }
 
-        /* 裁剪弹窗样式 */
+        /* 编辑图标 hover 显示 */
+        #dashboard-edit-icon {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+        #dashboard-edit-icon:hover {
+            opacity: 1;
+            pointer-events: auto;
+        }
         #cropper-modal {
             display: none;
             position: fixed;
@@ -865,46 +873,75 @@
             }
             // 检查dashboard功能是否enable
             const radarCanvas = document.getElementById('dashboard-radar');
-            
             const isDashboard = (data.dashboard === true);
-            radarCanvas.style.display = isDashboard ? 'block' : 'none';
-            // 添加点击跳转到 dashboard.html
-            radarCanvas.onclick = function() {
-                const uuid = getUUID();
-                window.location.href = '/dashboard' + (uuid ? ('?uuid=' + encodeURIComponent(uuid)) : '');
-            };
+            // 编辑图标容器
+            let editIcon = document.getElementById('dashboard-edit-icon');
+            if (!editIcon) {
+                editIcon = document.createElement('div');
+                editIcon.id = 'dashboard-edit-icon';
+                editIcon.style.position = 'absolute';
+                editIcon.style.top = '100px';
+                editIcon.style.right = '200px';
+                editIcon.style.zIndex = '102';
+                editIcon.style.cursor = 'pointer';
+                editIcon.style.opacity = '0';
+                editIcon.style.pointerEvents = 'none';
+                editIcon.style.transition = 'opacity 0.2s';
+                editIcon.innerHTML = `<div style="width:44px;height:44px;background:#fff;border-radius:50%;box-shadow:0 2px 8px #2563eb;display:flex;align-items:center;justify-content:center;">
+                    <svg xmlns='http://www.w3.org/2000/svg' class='h-7 w-7' viewBox='0 0 20 20' fill='#2563eb'>
+                        <title>编辑</title>
+                        <path d='M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.389-8.379-2.83-2.828z'/>
+                    </svg>
+                </div>`;
+                document.body.appendChild(editIcon);
+            }
+            // 适配移动端 right 和 top
+            function adjustEditIconPosition() {
+                let rightPx = 300;
+                let topPx = 200;
+                if (window.innerWidth < 640) {
+                    rightPx = rightPx * MOBILE_SCALE;
+                    topPx = topPx * MOBILE_SCALE;
+                }
+                editIcon.style.right = rightPx + 'px';
+                editIcon.style.top = topPx + 'px';
+            }
+            adjustEditIconPosition();
+            window.addEventListener('resize', adjustEditIconPosition);
             if (isDashboard) {
-                // 拉取雷达图数据并渲染
+                radarCanvas.style.display = 'block';
+                editIcon.style.opacity = '0';
+                editIcon.style.pointerEvents = 'none';
+                // ...existing code for radar chart rendering...
+                radarCanvas.onclick = function() {
+                    const uuid = getUUID();
+                    window.location.href = '/dashboard' + (uuid ? ('?uuid=' + encodeURIComponent(uuid)) : '');
+                };
+                // ...existing code for radar chart rendering...
                 fetch('/dashboard/mini?uuid=' + encodeURIComponent(getUUID()))
                     .then(res => res.json())
                     .then(chartData => {
-                        // 假设 chartData = {labels: [...], values: [...]} 或 {labels: [...], data: [...]} 或类似
-                        // 只保留 CA, KH, MG, N, P
+                        // ...existing code for radar chart rendering...
                         const radarKeys = ["CA", "KH", "MG", "N", "P"];
                         const bestValues = { CA: 400, KH: 8, MG: 1300, N: 5, P: 0.06 };
-                        // 归一化分数算法：最佳值为5分，偏离越远分数越低，线性递减到0分（允许你后续微调）
                         function normalizeScore(key, value) {
                             const best = bestValues[key];
                             if (best === undefined || value === undefined || isNaN(value)) return 0;
-                            // 允许偏离范围：CA±50, KH±3, MG±200, N±5, P±0.06
                             const ranges = { CA: 50, KH: 3, MG: 200, N: 5, P: 0.1 };
                             const range = ranges[key];
                             const diff = Math.abs(value - best);
                             let score = 5 - (diff / range) * 5;
                             if (score < 0) score = 0;
                             if (score > 5) score = 5;
-                            // 分成5档，四舍五入到最近的整数
                             return Math.round(score);
                         }
                         let labels = radarKeys;
                         let values = radarKeys.map(k => normalizeScore(k, Number(chartData[k])));
-                        // 保存原始值用于 tooltip
                         let originalValues = radarKeys.map(k => Number(chartData[k]));
-                        // 根据分数生成颜色数组
                         function getColor(score) {
-                            if (score >= 5) return 'rgba(0,200,70,1)'; // 绿色
-                            if (score >= 3) return 'rgba(255,165,0,1)'; // 橙色
-                            return 'rgba(255,60,60,1)'; // 红色
+                            if (score >= 5) return 'rgba(0,200,70,1)';
+                            if (score >= 3) return 'rgba(255,165,0,1)';
+                            return 'rgba(255,60,60,1)';
                         }
                         function getFillColor(score) {
                             if (score >= 5) return 'rgba(0,200,70,0.2)';
@@ -913,12 +950,10 @@
                         }
                         let pointColors = values.map(getColor);
                         let borderColors = values.map(getColor);
-                        // 渐变填充色：中心红色，外圈绿色
                         if (window.dashboardRadarChart && window.dashboardRadarChart.destroy) {
                             window.dashboardRadarChart.destroy();
                         }
                         const ctx = radarCanvas.getContext('2d');
-                        // 创建径向渐变
                         let gradient = ctx.createRadialGradient(
                             radarCanvas.width / 2,
                             radarCanvas.height / 2,
@@ -927,8 +962,8 @@
                             radarCanvas.height / 2,
                             radarCanvas.width / 2
                         );
-                        gradient.addColorStop(0, 'rgba(255,60,60,0.25)'); // 中心红色
-                        gradient.addColorStop(1, 'rgba(0,200,70,0.25)'); // 外圈绿色
+                        gradient.addColorStop(0, 'rgba(255,60,60,0.25)');
+                        gradient.addColorStop(1, 'rgba(0,200,70,0.25)');
                         window.dashboardRadarChart = new Chart(ctx, {
                             type: 'radar',
                             data: {
@@ -971,6 +1006,90 @@
                             }
                         });
                     });
+            } else {
+                radarCanvas.style.display = 'none';
+                editIcon.style.opacity = '0';
+                editIcon.style.pointerEvents = 'none';
+                // 鼠标移入父区域时显示
+                let parentArea = document.body;
+                parentArea.addEventListener('mousemove', function(e) {
+                    const rect = editIcon.getBoundingClientRect();
+                    if (
+                        e.clientX >= rect.left &&
+                        e.clientX <= rect.right &&
+                        e.clientY >= rect.top &&
+                        e.clientY <= rect.bottom
+                    ) {
+                        editIcon.style.opacity = '1';
+                        editIcon.style.pointerEvents = 'auto';
+                    } else {
+                        editIcon.style.opacity = '0';
+                        editIcon.style.pointerEvents = 'none';
+                    }
+                });
+                // 鼠标移入显示 tooltip
+                let tooltipDiv = document.getElementById('dashboard-edit-tooltip');
+                if (!tooltipDiv) {
+                    tooltipDiv = document.createElement('div');
+                    tooltipDiv.id = 'dashboard-edit-tooltip';
+                    tooltipDiv.style.position = 'absolute';
+                    tooltipDiv.style.top = '150px';
+                    tooltipDiv.style.right = editIcon.style.right;
+                    tooltipDiv.style.zIndex = '103';
+                    tooltipDiv.style.background = '#fff';
+                    tooltipDiv.style.color = '#2563eb';
+                    tooltipDiv.style.padding = '8px 16px';
+                    tooltipDiv.style.borderRadius = '8px';
+                    tooltipDiv.style.boxShadow = '0 2px 8px #2563eb';
+                    tooltipDiv.style.display = 'none';
+                    tooltipDiv.style.fontSize = '1rem';
+                    tooltipDiv.innerText = '需要增加海水测量图表么？';
+                    document.body.appendChild(tooltipDiv);
+                }
+                function adjustTooltipPosition() {
+                    let rightPx = 200;
+                    if (window.innerWidth < 640) {
+                        rightPx = rightPx * MOBILE_SCALE;
+                    }
+                    tooltipDiv.style.right = rightPx + 'px';
+                }
+                adjustTooltipPosition();
+                window.addEventListener('resize', adjustTooltipPosition);
+                editIcon.onmouseenter = function() {
+                    tooltipDiv.style.display = 'block';
+                };
+                editIcon.onmouseleave = function() {
+                    tooltipDiv.style.display = 'none';
+                };
+                editIcon.onclick = function() {
+                    // 弹窗确认是否要开启 dashboard
+                    showCustomConfirm('是否要开启海水测量图表？', '开启 Dashboard').then(async (confirmed) => {
+                        if (confirmed) {
+                            // 设置 dashboard: true 到 story_xxxx.json
+                            const uuid = getUUID();
+                            try {
+                                // 先获取当前 info
+                                const infoRes = await fetch(apiUrlWithUUID('info'));
+                                let infoData = { header: {}, footer: {} };
+                                if (infoRes.ok) {
+                                    infoData = await infoRes.json();
+                                }
+                                // 设置 dashboard: true
+                                infoData.dashboard = true;
+                                await fetch(apiUrlWithUUID('info'), {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify(infoData)
+                                });
+                                // 完全刷新页面以显示雷达图，避免UI残留
+                                window.location.reload();
+                            } catch (err) {
+                                // fallback: 跳转到 dashboard 页面
+                                window.location.href = '/dashboard' + (uuid ? ('?uuid=' + encodeURIComponent(uuid)) : '');
+                            }
+                        }
+                    });
+                };
             }
         }
 

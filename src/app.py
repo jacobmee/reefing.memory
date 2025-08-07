@@ -218,6 +218,31 @@ def add_static_data():
     except Exception as e:
         return jsonify(success=False, error=str(e)), 500
 
+@app.route("/dashboard/info", methods=["POST"])
+def add_info_data():
+    uuid = request.args.get("uuid")
+    if not uuid:
+        return jsonify(success=False, error="Missing uuid"), 400
+    store = ChartDataStore(uuid) 
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify(success=False, error="No data received"), 400
+        store.set_dashboard_info(data)
+        return jsonify(success=True)
+    except Exception as e:
+        return jsonify(success=False, error=str(e)), 500
+
+@app.route("/dashboard/info", methods=["GET"])
+def get_info_data():
+    uuid = request.args.get("uuid")
+    if not uuid:
+        return jsonify({"error": "Missing uuid"}), 400
+    store = ChartDataStore(uuid)
+    data = store.get_dashboard_info()
+    if data:
+        return jsonify(data)
+    return jsonify({})
 
 #############################################
 ##                  Main Entry Functions
