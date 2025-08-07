@@ -1,16 +1,16 @@
 <!DOCTYPE html>
-<html lang="zh-CN"></html>
+<html lang="en"></html>
 <head>
     <meta charset="UTF-8">
-    <title>Reefing Memory</title>
+    <title>Reefing Memories</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://fonts.googleapis.com/css?family=Oswald:300,700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css?family=Roboto:300,700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css?family=Lato:300,700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        // Custom modal replacement for alert() and confirm()
-        function showCustomConfirm(message, title = '确认操作') {
+        // Custom modal replacement for alert() and confiOswaldrm()
+        function showCustomConfirm(message, title = 'Confirm') {
             return new Promise((resolve) => {
                 let modal = document.getElementById('confirm-modal');
                 if (!modal) {
@@ -19,11 +19,11 @@
                     modal.className = 'modal';
                     modal.innerHTML = `
                         <div style="background:#fff;padding:24px 32px;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,0.18);min-width:320px;max-width:95vw;">
-                            <h2 id="confirm-title" style="font-size:1.2em;font-weight:bold;margin-bottom:12px;">确认</h2>
-                            <p id="confirm-message" style="margin-bottom:18px;color:#444;">你确定要执行此操作吗？</p>
+                            <h4 id="confirm-title" style="font-size:1.2em;font-weight:bold;margin-bottom:12px;">Confirm</h2>
+                            <p id="confirm-message" style="margin-bottom:18px;color:#444;font-family:'Oswald',sans-serif;">Are you sure you want to proceed?</p>
                             <div style="display:flex;justify-content:flex-end;gap:12px;">
-                                <button type="button" id="confirm-cancel" style="padding:8px 18px;background:#eee;color:#333;border:none;border-radius:6px;font-size:1em;cursor:pointer;">取消</button>
-                                <button type="button" id="confirm-ok" style="padding:8px 18px;background:#f87171;color:#fff;border:none;border-radius:6px;font-size:1em;cursor:pointer;">确定</button>
+                                <button type="button" id="confirm-cancel" style="padding:8px 18px;background:#eee;color:#333;border:none;border-radius:6px;font-size:1em;cursor:pointer;font-family:'Oswald',sans-serif;">Cancel</button>
+                                <button type="button" id="confirm-ok" style="padding:8px 18px;background:#f87171;color:#fff;border:none;border-radius:6px;font-size:1em;cursor:pointer;font-family:'Oswald',sans-serif;">OK</button>
                             </div>
                         </div>`;
                     document.body.appendChild(modal);
@@ -138,7 +138,7 @@
             min-height: 23vh;
             overflow-y: auto;
         }
-        .elements-list h4 {
+        h4 {
             margin: 10px 0 24px 0;
             font-family: 'Lato', sans-serif;
             font-size: 23px;
@@ -324,25 +324,25 @@
 <body>
     <div class="charts-container">
         <div id="realtimeSourceModal" style="display:none;position:fixed;z-index:1001;left:0;top:0;width:100vw;height:100vh;background:rgba(0,0,0,0.25);justify-content:center;align-items:center;">
-            <div style="background:#fff;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,0.18);padding:24px 32px;min-width:320px;max-width:95vw;position:relative;">
+            <div style="background:#fff;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,0.18);padding:24px 32px;min-width:320px;max-width:95vw;position:relative;font-family:'Oswald',sans-serif;">
                 <button id="closeRealtimeSourceModal" style="position:absolute;top:12px;right:12px;background:none;border:none;font-size:1.5em;color:#888;cursor:pointer;">&times;</button>
-                <h4 style="margin-bottom:16px;">编辑实时数据源</h4>
+                <h4 style="margin-bottom:16px;">Configure realtime datasource</h4>
                 <form id="realtimeSourceForm" style="display:flex;flex-direction:column;gap:16px;">
-                    <input id="realtimeSourceInput" name="realtimesource" type="text" style="font-size:1em;padding:8px 12px 8px 12px;border-radius:6px;border:1px solid #ccc;width:calc(100% - 4px);box-sizing:border-box;" />
-                    <button type="submit" style="margin-top:12px;background:#2563eb;color:#fff;border:none;border-radius:6px;font-size:1.1em;padding:8px 32px;cursor:pointer;width:fit-content;align-self:center;">保存</button>
+                    <input id="realtimeSourceInput" name="realtimesource" type="text" style="font-size:1em;padding:8px 12px 8px 12px;border-radius:6px;border:1px solid #ccc;width:calc(100% - 4px);box-sizing:border-box;font-family:'Oswald',sans-serif;" />
+                    <button type="submit" style="margin-top:12px;background:#2563eb;color:#fff;border:none;border-radius:6px;font-size:1.1em;padding:8px 32px;cursor:pointer;width:fit-content;align-self:center;font-family:'Oswald',sans-serif;">Save</button>
                 </form>
             </div>
         </div>
         <!-- 配置弹窗 -->
         <div id="configModal" style="display:none;position:fixed;z-index:1002;left:0;top:0;width:100vw;height:100vh;background:rgba(0,0,0,0.25);justify-content:center;align-items:center;">
-            <div style="background:#fff;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,0.18);padding:24px 32px;min-width:320px;max-width:95vw;position:relative;display:flex;flex-direction:column;gap:24px;">
+            <div style="background:#fff;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,0.18);padding:24px 32px;min-width:320px;max-width:95vw;position:relative;font-family:'Oswald',sans-serif;display:flex;flex-direction:column;gap:24px;">
                 <button id="closeConfigModal" style="position:absolute;top:12px;right:12px;background:none;border:none;font-size:1.5em;color:#888;cursor:pointer;">&times;</button>
-                <h4 style="margin-bottom:8px;">Dashboard 配置</h4>
-                <button id="disableDashboardBtn" style="background:#f87171;color:#fff;border:none;border-radius:6px;padding:8px 18px;cursor:pointer;font-size:1em;box-shadow:0 2px 8px #f87171;">
-                    禁用 Dashboard
+                <h4 style="margin-bottom:8px;">Dashboard configuration</h4>
+                <button id="disableDashboardBtn" style="background:#f87171;color:#fff;border:none;border-radius:6px;padding:8px 18px;cursor:pointer;font-size:1em;box-shadow:0 2px 8px #f87171;font-family:'Oswald',sans-serif;">
+                    Disable Dashboard
                 </button>
-                <button id="editRealtimeSourceBtn" style="background:#2563eb;color:#fff;border:none;border-radius:6px;padding:8px 18px;cursor:pointer;font-size:1em;box-shadow:0 2px 8px #2563eb;">
-                    编辑实时数据源
+                <button id="editRealtimeSourceBtn" style="background:#2563eb;color:#fff;border:none;border-radius:6px;padding:8px 18px;cursor:pointer;font-size:1em;box-shadow:0 2px 8px #2563eb;font-family:'Oswald',sans-serif;">
+                    Edit realtime datasource
                 </button>
             </div>
         </div>
@@ -354,7 +354,7 @@
                         <button id="addEntryBtn" title="Add new entry" style="background: none; border: none; cursor: pointer; color: #3b82f6; display: flex; align-items: center; justify-content: center; height: 1.6em; width: 1.6em; padding: 0;">
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
                         </button>
-                        <button id="configBtn" title="配置" style="background: none; border: none; cursor: pointer; color: #2563eb; display: flex; align-items: center; justify-content: center; height: 1.6em; width: 1.6em; padding: 0;">
+                        <button id="configBtn" title="configuration" style="background: none; border: none; cursor: pointer; color: #2563eb; display: flex; align-items: center; justify-content: center; height: 1.6em; width: 1.6em; padding: 0;">
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
                         </button>
                     </div>
@@ -376,7 +376,7 @@
                             </div>
                             <ul id="modalElementList" style="list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:10px;">
                                 </ul>
-                            <button type="submit" style="margin-top:12px; background:#3b82f6; color:#fff; border:none; border-radius:4px; font-size:1.1em; padding:8px 32px; cursor:pointer; width:fit-content; align-self:center;">Save</button>
+                            <button type="submit" style="margin-top:12px; background:#3b82f6; color:#fff; border:none; border-radius:4px; font-family:'Oswald',sans-serif;font-size:1.1em; padding:8px 32px; cursor:pointer; width:fit-content; align-self:center;">Save</button>
                         </form>
                     </div>
                 </div>
@@ -453,18 +453,18 @@
     <script>
         // --- Disable Dashboard ---
         document.getElementById('disableDashboardBtn').onclick = function() {
-            // 关闭配置弹窗，避免弹窗重叠
+            // Close config modal to avoid overlap
             var configModal = document.getElementById('configModal');
             if (configModal) configModal.style.display = 'none';
-            showCustomConfirm('确定要禁用 Dashboard 吗？', '禁用 Dashboard').then(function(confirmed) {
+            showCustomConfirm('Are you sure you want to disable Dashboard?', 'Disable Dashboard').then(function(confirmed) {
                 if (!confirmed) return;
-                // 获取uuid参数
+                // Get uuid param
                 function getUUID() {
                     const urlParams = new URLSearchParams(window.location.search);
                     return urlParams.get('uuid') || '';
                 }
                 const uuid = getUUID();
-                // 获取当前 info
+                // Get current info
                 fetch('/api/story/info?uuid=' + encodeURIComponent(uuid))
                     .then(res => res.json())
                     .then(infoData => {
@@ -476,11 +476,11 @@
                         });
                     })
                     .then(() => {
-                        // 跳转回 story.html
+                        // Redirect to story.html
                         const uuid = getUUID();
                         window.location.href = '/story' + (uuid ? ('?uuid=' + encodeURIComponent(uuid)) : '');
                     })
-                    .catch(() => showCustomConfirm('禁用失败，请重试。', '禁用 Dashboard'));
+                    .catch(() => showCustomConfirm('Disable failed, please try again.', 'Disable Dashboard'));
             });
         };
 
@@ -492,16 +492,16 @@
         const input = document.getElementById('realtimeSourceInput');
 
         editBtn.onclick = function() {
-            // 获取uuid参数
+            // Get uuid param
             function getUUID() {
                 const urlParams = new URLSearchParams(window.location.search);
                 return urlParams.get('uuid') || '';
             }
             const uuid = getUUID();
-            // 关闭配置弹窗，避免弹窗重叠
+            // Close config modal to avoid overlap
             var configModal = document.getElementById('configModal');
             if (configModal) configModal.style.display = 'none';
-            // 获取当前数据源
+            // Get current data source
             fetch('/dashboard/info?uuid=' + encodeURIComponent(uuid))
                 .then(res => res.json())
                 .then(infoData => {
@@ -517,13 +517,13 @@
         };
         form.onsubmit = function(e) {
             e.preventDefault();
-            // 获取uuid参数
+            // Get uuid param
             function getUUID() {
                 const urlParams = new URLSearchParams(window.location.search);
                 return urlParams.get('uuid') || '';
             }
             const uuid = getUUID();
-            // 获取当前 info
+            // Get current info
             fetch('/api/story/info?uuid=' + encodeURIComponent(uuid))
                 .then(res => res.json())
                 .then(infoData => {
@@ -538,11 +538,11 @@
                     modal.style.display = 'none';
                     window.location.reload();
                 })
-                .catch(() => alert('保存失败，请重试。'));
+                .catch(() => alert('Save failed, please try again.'));
         };
 
         // --- Modal logic for adding new entry ---
-        // 格式化 'Mon DD' 为 YYYY-MM-DD
+        // Format 'Mon DD' to YYYY-MM-DD
         function formatDateYYYYMMDD(dateStr) {
             const d = new Date(dateStr + ', ' + new Date().getFullYear());
             const yyyy = d.getFullYear();
@@ -558,7 +558,7 @@
         const entryDateInput = document.getElementById('entryDate');
 
         // Element keys and display names for modal
-        // 元素参数统一结构体
+        // Unified element config structure
         const ELEMENTS_CONFIG = {
             N:    { label: 'Nitrate',    min: 0,    best: 5,   max: 20,   decimals: 1 },
             P:    { label: 'Phosphate',  min: 0,    best: 0.06,max: 0.2,  decimals: 2 },
@@ -568,6 +568,7 @@
         };
 
         // modalElements 用于弹窗渲染
+        // modalElements for modal rendering
         const modalElements = [
             { key: 'N', ...ELEMENTS_CONFIG.N },
             { key: 'P', ...ELEMENTS_CONFIG.P },
@@ -620,7 +621,7 @@
         }
 
         function renderModalEntry(entry) {
-            // entry: object with keyrenderModalEntrys N, P, CA, MG, KH, date
+            // entry: object with keys N, P, CA, MG, KH, date
             modalElementList.innerHTML = '';
             modalElements.forEach((el, idx) => {
                 const li = document.createElement('li');
@@ -718,7 +719,7 @@
                     percentSpan.textContent = `${per_show.toFixed(0)}%`;
                     percentSpan.style.color = getPercentageColor(value, el.min, el.best, el.max);
                 }
-                // 整个li区域都能拖动
+                // Entire li area is draggable
                 li.addEventListener('mousedown', function(e) {
                     setValueFromBar(e);
                     function moveHandler(ev) { setValueFromBar(ev); }
@@ -759,12 +760,12 @@
         // Always reset to 'add new' mode
         const chartData = window.chart_data || [];
         modalEntryIndex = chartData.length;
-        // 默认数据：可选，使用最新一条数据作为初始值，否则用默认值
+        // Default data: use latest entry as initial value, otherwise use default
         let entry = null;
         if (chartData.length > 0) {
             entry = chartData[chartData.length - 1];
         }
-        // 日期始终为今天
+        // Date is always today
         const today = new Date();
         entryDateInput.value = today.toISOString().slice(0,10);
         renderModalEntry(entry);
@@ -862,7 +863,7 @@
             Array.from(modalElementList.children).forEach(li => {
                 const key = li.dataset.key;
                 let value = parseFloat(li.dataset.value);
-                // 按照 ELEMENTS_CONFIG 的 decimals 精度处理
+                // Round according to ELEMENTS_CONFIG decimals
                 if (ELEMENTS_CONFIG[key]) {
                     const decimals = ELEMENTS_CONFIG[key].decimals;
                     const factor = Math.pow(10, decimals);
@@ -1669,6 +1670,7 @@
         updateElementsList();
 
         // --- 配置弹窗逻辑 ---
+        // --- Config modal logic ---
         const configBtn = document.getElementById('configBtn');
         const configModal = document.getElementById('configModal');
         const closeConfigModal = document.getElementById('closeConfigModal');
