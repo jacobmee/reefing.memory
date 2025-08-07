@@ -189,6 +189,19 @@ def dashboard():
         "dashboard.html", chart_data=data, realtime_data=realtime_data
     )
 
+# API endpoint for chart data (for radar chart in story.html)
+@app.route("/dashboard/mini", methods=["GET"])
+def get_chart_data():
+    uuid = request.args.get("uuid")
+    if not uuid:
+        return jsonify({"error": "Missing uuid"}), 400
+    store = ChartDataStore(uuid)
+    data = store.load_static_data()
+    # 只返回最后一条数据
+    if isinstance(data, list) and data:
+        return jsonify(data[-1])
+    return jsonify({})
+
 # Add endpoint for saving static data
 @app.route("/dashboard", methods=["POST"])
 def add_static_data():

@@ -39,7 +39,6 @@ class ChartDataStore:
             data = sorted(data, key=lambda d: d.get("time", ""))
             data = data[-20:]  # 取最后25行，顺序为从旧到新
 
-        logger.debug("Loaded static  data:", data)
         return data
 
     def save_static_data(self, data):

@@ -261,12 +261,12 @@
 </head>
 <!-- Cropper.js -->
 <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.5.13/dist/cropper.min.js"></script>
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <body class="bg-white text-black">
-    <!-- 海水缸类型标识图片，默认隐藏 -->
-    <a id="dashboard-link" href="#">
-        <img id="dashboard-flag" src="/static/dashboard-flag.png" alt="Dashboard" style="position:absolute;top:120px;right:240px;width:200px;height:200px;z-index:100;cursor:pointer;" />
-    </a>
+    <!-- 雷达图 canvas，默认隐藏 -->
+    <canvas id="dashboard-radar" width="220" height="220" style="position:absolute;top:100px;right:200px;z-index:101;display:none;"></canvas>
 
     <!-- 裁剪图片弹窗 -->
     <div id="cropper-modal">
@@ -864,9 +864,114 @@
                 document.getElementById('footer-text').textContent = data.footer.footer_text || '';
             }
             // 检查dashboard功能是否enable
-            const dashboardFlag = document.getElementById('dashboard-flag');
-            if (dashboardFlag) {
-                dashboardFlag.style.display = (data.dashboard === true) ? 'block' : 'none';}
+            const radarCanvas = document.getElementById('dashboard-radar');
+            
+            const isDashboard = (data.dashboard === true);
+            radarCanvas.style.display = isDashboard ? 'block' : 'none';
+            // 添加点击跳转到 dashboard.html
+            radarCanvas.onclick = function() {
+                const uuid = getUUID();
+                window.location.href = '/dashboard' + (uuid ? ('?uuid=' + encodeURIComponent(uuid)) : '');
+            };
+            if (isDashboard) {
+                // 拉取雷达图数据并渲染
+                fetch('/dashboard/mini?uuid=' + encodeURIComponent(getUUID()))
+                    .then(res => res.json())
+                    .then(chartData => {
+                        // 假设 chartData = {labels: [...], values: [...]} 或 {labels: [...], data: [...]} 或类似
+                        // 只保留 CA, KH, MG, N, P
+                        const radarKeys = ["CA", "KH", "MG", "N", "P"];
+                        const bestValues = { CA: 400, KH: 8, MG: 1300, N: 5, P: 0.06 };
+                        // 归一化分数算法：最佳值为5分，偏离越远分数越低，线性递减到0分（允许你后续微调）
+                        function normalizeScore(key, value) {
+                            const best = bestValues[key];
+                            if (best === undefined || value === undefined || isNaN(value)) return 0;
+                            // 允许偏离范围：CA±50, KH±3, MG±200, N±5, P±0.06
+                            const ranges = { CA: 50, KH: 3, MG: 200, N: 5, P: 0.1 };
+                            const range = ranges[key];
+                            const diff = Math.abs(value - best);
+                            let score = 5 - (diff / range) * 5;
+                            if (score < 0) score = 0;
+                            if (score > 5) score = 5;
+                            // 分成5档，四舍五入到最近的整数
+                            return Math.round(score);
+                        }
+                        let labels = radarKeys;
+                        let values = radarKeys.map(k => normalizeScore(k, Number(chartData[k])));
+                        // 保存原始值用于 tooltip
+                        let originalValues = radarKeys.map(k => Number(chartData[k]));
+                        // 根据分数生成颜色数组
+                        function getColor(score) {
+                            if (score >= 5) return 'rgba(0,200,70,1)'; // 绿色
+                            if (score >= 3) return 'rgba(255,165,0,1)'; // 橙色
+                            return 'rgba(255,60,60,1)'; // 红色
+                        }
+                        function getFillColor(score) {
+                            if (score >= 5) return 'rgba(0,200,70,0.2)';
+                            if (score >= 3) return 'rgba(255,165,0,0.2)';
+                            return 'rgba(255,60,60,0.2)';
+                        }
+                        let pointColors = values.map(getColor);
+                        let borderColors = values.map(getColor);
+                        // 渐变填充色：中心红色，外圈绿色
+                        if (window.dashboardRadarChart && window.dashboardRadarChart.destroy) {
+                            window.dashboardRadarChart.destroy();
+                        }
+                        const ctx = radarCanvas.getContext('2d');
+                        // 创建径向渐变
+                        let gradient = ctx.createRadialGradient(
+                            radarCanvas.width / 2,
+                            radarCanvas.height / 2,
+                            0,
+                            radarCanvas.width / 2,
+                            radarCanvas.height / 2,
+                            radarCanvas.width / 2
+                        );
+                        gradient.addColorStop(0, 'rgba(255,60,60,0.25)'); // 中心红色
+                        gradient.addColorStop(1, 'rgba(0,200,70,0.25)'); // 外圈绿色
+                        window.dashboardRadarChart = new Chart(ctx, {
+                            type: 'radar',
+                            data: {
+                                labels: labels,
+                                datasets: [{
+                                    data: values,
+                                    backgroundColor: gradient,
+                                    borderColor: borderColors,
+                                    borderWidth: 2,
+                                    pointBackgroundColor: pointColors,
+                                    pointBorderColor: pointColors
+                                }]
+                            },
+                            options: {
+                                responsive: false,
+                                plugins: {
+                                    legend: { display: false },
+                                    tooltip: {
+                                        callbacks: {
+                                            label: function(context) {
+                                                const key = radarKeys[context.dataIndex];
+                                                const rawValue = originalValues[context.dataIndex];
+                                                return key + ': ' + rawValue;
+                                            }
+                                        }
+                                    }
+                                },
+                                scales: {
+                                    r: {
+                                        min: 0,
+                                        max: 5,
+                                        ticks: {
+                                            stepSize: 1,
+                                            callback: function(val) {
+                                                return Number.isInteger(val) ? val : '';
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    });
+            }
         }
 
         function openHeaderModal() {
@@ -1031,16 +1136,6 @@
             setTimeout(() => renderConnectors(nodesData), 100);
         });
 
-        // Dashboard flag 跳转逻辑
-        document.getElementById('dashboard-link').onclick = function(e) {
-            e.preventDefault();
-            const uuid = getUUID();
-            if (uuid) {
-                window.location.href = '/dashboard?uuid=' + encodeURIComponent(uuid);
-            } else {
-                window.location.href = '/dashboard';
-            }
-        };
         // Initial fetches on page load
         document.addEventListener('DOMContentLoaded', () => {
             fetchAndRenderHeaderFooter();
@@ -1048,6 +1143,19 @@
             setupConnectorObservers();
             // Extra redraw after 500ms for mobile scaling quirks
             setTimeout(() => renderConnectors(nodesData), 500);
+
+            // 适配雷达图 canvas 的 right 在移动端自动乘以 scale
+            function adjustRadarCanvasPosition() {
+                const radarCanvas = document.getElementById('dashboard-radar');
+                if (!radarCanvas) return;
+                let rightPx = 200;
+                if (window.innerWidth < 640) {
+                    rightPx = rightPx * MOBILE_SCALE;
+                }
+                radarCanvas.style.right = rightPx + 'px';
+            }
+            adjustRadarCanvasPosition();
+            window.addEventListener('resize', adjustRadarCanvasPosition);
         });
     </script>
 
