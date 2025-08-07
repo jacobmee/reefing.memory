@@ -258,7 +258,8 @@
                     love</p>
             </div>
             <button onclick="openHeaderModal()"
-                class="header-action-btn ml-4 px-6 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors shadow-md self-start">
+                class="header-action-btn px-4 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors shadow-md"
+                style="position:absolute;left:50%;top: 50px;">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                     <path
                         d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.389-8.379-2.83-2.828z" />
@@ -269,10 +270,11 @@
 
     <!-- Main Content Section -->
     <main class="container mx-auto px-4 py-8" style="margin-top:50px;margin-bottom:100px;">
-        <div id="storyline-row" style="display:flex;flex-direction:row;align-items:flex-end;justify-content:flex-start;">
+        <div id="storyline-row" style="position:relative;display:flex;flex-direction:row;align-items:flex-end;justify-content:flex-start;">
             <div id="storyline-container" class="storyline relative max-w-4xl mx-auto" style="flex:1;display:flex;"></div>
             <button id="add-node-button" onclick="openAddModal()"
-                class="header-action-btn flex items-center justify-center w-14 h-14 bg-green-600 text-white rounded-full hover:bg-green-700 transition-colors shadow-lg text-3xl" style="margin-left:12px;align-self:flex-end;">
+                class="header-action-btn flex items-center justify-center w-14 h-14 bg-green-600 text-white rounded-full hover:bg-green-700 transition-colors shadow-lg text-3xl"
+                style="position:absolute;left:88%;top: 30px;">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" viewBox="0 0 20 20" fill="currentColor">
                     <path fill-rule="evenodd"
                         d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
@@ -287,7 +289,8 @@
         <div class="container mx-auto flex items-center justify-center gap-2">
             <p id="footer-text" class="text-sm mb-0">© 2024 The Love Company. All rights reserved.</p>
             <button onclick="openFooterModal()"
-                class="footer-action-btn px-4 py-1 text-xs bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors shadow-md ml-2">
+                class="footer-action-btn px-4 py-1 text-xs bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors shadow-md ml-2"
+                style="position:absolute;left:50%;">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                     <path
                         d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.389-8.379-2.83-2.828z" />
