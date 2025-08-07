@@ -23,8 +23,11 @@ def save_node_image(node_id, image_base64):
 
 
 class ChartDataStore:
-    def __init__(self):
-        self.filename = os.path.join(os.path.dirname(__file__), "data", "data.json")
+    def __init__(self, uuid=None):
+        if uuid:
+            self.filename = os.path.join(os.path.dirname(__file__), "data", f"data_{uuid}.json")
+        else:
+            self.filename = os.path.join(os.path.dirname(__file__), "data", "data.json")
 
     def load_static_data(self):
         if not os.path.exists(self.filename):
@@ -178,13 +181,20 @@ class StoryDataStore:
 
     def get_info(self):
         data = self.load_data()
-        # Return header and footer info
-        return {"header": data.get("header", {}), "footer": data.get("footer", {})}
+        # Return header, footer, and is_dashboard info
+        return {
+            "header": data.get("header", {}),
+            "footer": data.get("footer", {}),
+            "dashboard": data.get("dashboard", False)
+        }
 
     def set_info(self, info):
         data = self.load_data()
         data["header"] = info.get("header", {})
         data["footer"] = info.get("footer", {})
+        # 新增  dashboard 字段
+        if "dashboard" in info:
+            data["dashboard"] = info["dashboard"]
         self.save_data(data)
 
     def add_story_node(self, node_data):

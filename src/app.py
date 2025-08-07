@@ -179,20 +179,28 @@ def save_info():
 #############################################
 @app.route("/dashboard")
 def dashboard():
-    data = chart_store.load_static_data()
-    realtime_data = chart_store.load_realtime_data()
+    uuid = request.args.get("uuid")
+    if not uuid:
+        return jsonify(success=False, error="Missing uuid"), 400
+    store = ChartDataStore(uuid)
+    data = store.load_static_data()
+    realtime_data = store.load_realtime_data()
     return render_template(
         "dashboard.html", chart_data=data, realtime_data=realtime_data
     )
 
 # Add endpoint for saving static data
-@app.route("/add_static_data", methods=["POST"])
+@app.route("/dashboard", methods=["POST"])
 def add_static_data():
+    uuid = request.args.get("uuid")
+    if not uuid:
+        return jsonify(success=False, error="Missing uuid"), 400
+    store = ChartDataStore(uuid) 
     try:
         data = request.get_json()
         if not data:
             return jsonify(success=False, error="No data received"), 400
-        chart_store.save_static_data(data)
+        store.save_static_data(data)
         return jsonify(success=True)
     except Exception as e:
         return jsonify(success=False, error=str(e)), 500

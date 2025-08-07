@@ -263,6 +263,10 @@
 <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.5.13/dist/cropper.min.js"></script>
 
 <body class="bg-white text-black">
+    <!-- 海水缸类型标识图片，默认隐藏 -->
+    <a id="dashboard-link" href="#">
+        <img id="dashboard-flag" src="/static/dashboard-flag.png" alt="Dashboard" style="position:absolute;top:120px;right:240px;width:200px;height:200px;z-index:100;cursor:pointer;" />
+    </a>
 
     <!-- 裁剪图片弹窗 -->
     <div id="cropper-modal">
@@ -859,6 +863,10 @@
             if (data.footer) {
                 document.getElementById('footer-text').textContent = data.footer.footer_text || '';
             }
+            // 检查dashboard功能是否enable
+            const dashboardFlag = document.getElementById('dashboard-flag');
+            if (dashboardFlag) {
+                dashboardFlag.style.display = (data.dashboard === true) ? 'block' : 'none';}
         }
 
         function openHeaderModal() {
@@ -1023,6 +1031,16 @@
             setTimeout(() => renderConnectors(nodesData), 100);
         });
 
+        // Dashboard flag 跳转逻辑
+        document.getElementById('dashboard-link').onclick = function(e) {
+            e.preventDefault();
+            const uuid = getUUID();
+            if (uuid) {
+                window.location.href = '/dashboard?uuid=' + encodeURIComponent(uuid);
+            } else {
+                window.location.href = '/dashboard';
+            }
+        };
         // Initial fetches on page load
         document.addEventListener('DOMContentLoaded', () => {
             fetchAndRenderHeaderFooter();

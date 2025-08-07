@@ -491,7 +491,7 @@
             container.style.justifyContent = 'flex-start';
             container.style.alignItems = 'flex-end';
             nodes.forEach((node, index) => {
-                console.info(`Rendering node ${index}:`, node);
+                //console.info(`Rendering node ${index}:`, node);
                 let imgSrc = node.avatar_image || node.original_image || node.image || 'https://placehold.co/100x100';
                 const html = `
                     <div class="storyline-item" style="display:flex;flex-direction:column;align-items:center;margin:0 0px;position:relative;" draggable="true" data-index="${index}" data-id="${node.id}">

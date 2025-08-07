@@ -698,8 +698,14 @@
             });
             // Compose data
             const data = { date: dateStr, ...values };
+            // 获取uuid参数
+            function getUUID() {
+                const urlParams = new URLSearchParams(window.location.search);
+                return urlParams.get('uuid') || '';
+            }
+            const uuid = getUUID();
             // Send to backend
-            fetch('/add_static_data', {
+            fetch('/dashboard?uuid=' + encodeURIComponent(uuid), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
